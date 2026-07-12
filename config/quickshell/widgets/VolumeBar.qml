@@ -41,22 +41,7 @@ ShellRoot {
     property bool userInteracting: false
 
     // ── Active screen ──
-    property string activeMonitor: ""
-    Timer {
-        interval: 200; running: true; repeat: true
-        onTriggered: activeMonitorProc.running = true
-    }
-    Process {
-        id: activeMonitorProc
-        command: ["sh","-c","hyprctl cursorpos -j | python3 -c \"\nimport sys,json,subprocess\npos=json.load(sys.stdin)\nmons=json.loads(subprocess.check_output(['hyprctl','monitors','-j']))\nfor m in mons:\n    x,y=m['x'],m['y']\n    w,h=m['width'],m['height']\n    if x<=pos['x']<x+w and y<=pos['y']<y+h:\n        print(m['name'])\n        break\n\""]
-        running: false
-        stdout: StdioCollector {
-            onStreamFinished: {
-                var n = this.text.trim()
-                if (n !== "" && n !== root.activeMonitor) root.activeMonitor = n
-            }
-        }
-    }
+    property string activeMonitor: Quickshell.screens.length > 0 ? Quickshell.screens[0].name : ""
 
     // ── Poll volume ──
     Timer {
@@ -107,13 +92,14 @@ ShellRoot {
             WlrLayershell.layer: WlrLayer.Overlay
             WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
 
-            readonly property bool isActive: modelData.name === root.activeMonitor
+            readonly property bool isActive: root.activeMonitor === modelData.name
 
             // Revealed state: hover on one of the zones or interaction
-            property bool revealed: hoverArea.containsMouse
+            property bool revealed: isActive && (
+                                     hoverArea.containsMouse
                                   || barMouseArea.containsMouse
                                   || barMouseArea.pressed
-                                  || hideTimer.running
+                                  || hideTimer.running)
 
             // Width: just the hover zone when hidden, extended when revealed
             // Height: always that of the bar (+ margin for label)
@@ -127,7 +113,6 @@ ShellRoot {
             // Anchored at top, right side
             anchors.top: true
             margins.top: 90
-            visible: isActive
 
             Timer {
                 id: hideTimer
@@ -144,7 +129,10 @@ ShellRoot {
                 y: 0
                 width: root.hoverWidth
                 height: parent.height
-                onEntered: hideTimer.stop()
+                onEntered: {
+                    root.activeMonitor = modelData.name
+                    hideTimer.stop()
+                }
                 onExited:  hideTimer.restart()
             }
 

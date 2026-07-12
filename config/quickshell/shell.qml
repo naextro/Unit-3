@@ -21,7 +21,7 @@ ShellRoot {
     // ── BRIGHTNESSBAR ──
     BrightnessBar {}
     // ── PLAYERCTL ──
-    property bool   playerVisible: false
+    property bool   playerVisible: false   // one-way mirror of Player's own `shown`, for gating only — never drives the toggle
     property bool   playerOnTop:   false
     property string mpTitle:    "END OF EVANGELION"
     property string mpArtist:   "NEON GENESIS // ANNO"
@@ -30,11 +30,14 @@ ShellRoot {
     property real   mpPosition: 0
     property real   mpLength:   341
 
+    // Long-lived, event-driven MPRIS stream — no polling fork.
+    // --follow keeps this process alive and only emits on actual
+    // metadata/status change (track change, play/pause, seek).
     Process {
         id: playerctlMeta
-        command: ["playerctl","metadata","--format",
+        command: ["playerctl","metadata","--follow","--format",
                   "{{title}}|{{artist}}|{{mpris:artUrl}}|{{status}}|{{position}}|{{mpris:length}}"]
-        running: false
+        running: true
         stdout: SplitParser {
             onRead: data => {
                 var p = data.trim().split("|")
@@ -52,29 +55,21 @@ ShellRoot {
     Process { id: pcPlay; command: ["playerctl","play-pause"]; running: false }
     Process { id: pcNext; command: ["playerctl","next"];       running: false }
     Process { id: pcPrev; command: ["playerctl","previous"];   running: false }
-    Timer { interval:1000; running:true; repeat:true; onTriggered: playerctlMeta.running=true }
+
+    // Local-only progress ticker — no process fork, only runs while the
+    // player panel is actually open AND something is playing.
+    Timer {
+        id: positionTicker
+        interval: 1000
+        running: root.playerVisible && root.mpPlaying
+        repeat:  true
+        onTriggered: root.mpPosition = Math.min(root.mpLength, root.mpPosition + 1)
+    }
 
     property string currentUser: "user"
     Process {
         id: getUserProc; command:["sh","-c","echo $USER"]; running:true
         stdout: SplitParser { onRead: data => { var u=data.trim(); if(u!=="") root.currentUser=u } }
-    }
-
-    property int _lastToggle: 0; property int _lastFront: 0
-    property int _lastMenu:   0
-
-    Process { id:chkToggle; command:["sh","-c","wc -l < /tmp/qs-toggle 2>/dev/null || echo 0"]; running:false
-        stdout:StdioCollector{ onStreamFinished:{ var n=parseInt(this.text.trim())||0; if(n!==root._lastToggle){root._lastToggle=n;root.playerVisible=!root.playerVisible} }}
-    }
-    Process { id:chkFront; command:["sh","-c","wc -l < /tmp/qs-front 2>/dev/null || echo 0"]; running:false
-        stdout:StdioCollector{ onStreamFinished:{ var n=parseInt(this.text.trim())||0; if(n!==root._lastFront){root._lastFront=n;root.playerOnTop=!root.playerOnTop} }}
-    }
-    Process { id:chkMenu; command:["sh","-c","wc -l < /tmp/qs-menu 2>/dev/null || echo 0"]; running:false
-        stdout:StdioCollector{ onStreamFinished:{ var n=parseInt(this.text.trim())||0; if(n!==root._lastMenu){root._lastMenu=n;detectMonitor.running=true} }}
-    }
-
-    Timer { interval:200; running:true; repeat:true
-        onTriggered:{ chkToggle.running=true;chkFront.running=true;chkMenu.running=true }
     }
 
     Component.onCompleted: {
@@ -99,9 +94,15 @@ ShellRoot {
         }
     }
 
-
-
-
+    // ── Shell-level IPC — replaces the /tmp file-polling entirely ──
+    // qs ipc call shell toggleFront   → bring player above other windows
+    // qs ipc call shell toggleMenu    → open/close the menu
+    // Player's own toggle stays self-contained: qs ipc call player toggle
+    IpcHandler {
+        target: "shell"
+        function toggleFront(): void { root.playerOnTop = !root.playerOnTop }
+        function toggleMenu(): void  { detectMonitor.running = true }
+    }
 
 
     // ── MENU ──
@@ -132,13 +133,16 @@ ShellRoot {
             required property var modelData;screen:modelData
             anchors.top:true;anchors.right:true
             margins.top:Math.round(modelData.height*Settings.playerPositionY);margins.right:20
-            exclusionMode:ExclusionMode.Ignore;aboveWindows:root.playerOnTop||playerItem.animRunning;color:"transparent"
+            exclusionMode:ExclusionMode.Ignore;aboveWindows: playerItem.shown || playerItem.animRunning;color:"transparent"
             implicitWidth:Settings.playerWidth;implicitHeight:playerItem.implicitHeight
             Player{id:playerItem;anchors.fill:parent
                 mpTitle:root.mpTitle;mpArtist:root.mpArtist;mpCoverUrl:root.mpCoverUrl
                 mpPlaying:root.mpPlaying;mpPosition:root.mpPosition;mpLength:root.mpLength
                 onPlayPause:pcPlay.running=true;onNextTrack:pcNext.running=true;onPrevTrack:pcPrev.running=true}
-            Connections{target:root;function onPlayerVisibleChanged(){playerItem.toggleVisible()}}
+            // ONE-WAY only: Player toggles itself via its own IpcHandler (qs ipc call player toggle).
+            // This just mirrors the resulting state up to root for the position-ticker gate —
+            // it must never call playerItem.toggleVisible() or you get a double-toggle loop.
+            Connections{target:playerItem;function onShownChanged(){root.playerVisible=playerItem.shown}}
         }
     }
 

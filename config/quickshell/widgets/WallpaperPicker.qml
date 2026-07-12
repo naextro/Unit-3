@@ -21,7 +21,19 @@ ShellRoot {
     property string xdgConfigHome: Quickshell.env("XDG_CONFIG_HOME") || (home + "/.config")
     property string xdgPictures:   Quickshell.env("XDG_PICTURES_DIR") || (home + "/Pictures")
     property string wallpaperDir:  xdgPictures + "/wallpapers"
-    property string activeMonitor: ""   // name of active monitor (where the mouse is)
+    property string activeMonitor: Quickshell.screens.length > 0 ? Quickshell.screens[0].name : ""   // name of active monitor (where the mouse is)
+
+    // ── Safety Exit Timer ──
+    Timer {
+        id: safetyExitTimer
+        interval: 1500
+        running: root.hiding
+        repeat: false
+        onTriggered: {
+            console.log("WallpaperPicker: Safety exit triggered")
+            Qt.quit()
+        }
+    }
 
     // ── Detect the active monitor ──
     Process {
@@ -366,7 +378,7 @@ ShellRoot {
                                 Image {
                                     anchors.fill: parent
                                     anchors.margins: 2
-                                    source: "file://" + root.wallpaperDir + "/" + root.wallpapers[thumb.wIdx]
+                                    source: (thumb.absDelta <= 2) ? ("file://" + root.wallpaperDir + "/" + root.wallpapers[thumb.wIdx]) : ""
                                     fillMode: Image.PreserveAspectCrop
                                     asynchronous: true
                                     smooth: true
@@ -417,7 +429,7 @@ ShellRoot {
                         reveal.stop()
                         hide.position = 0
                         hide.play()
-                        if (isPrimary) hideFadeTimer.restart()
+                        hideFadeTimer.restart()
                     }
                 }
             }

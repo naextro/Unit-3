@@ -50,7 +50,7 @@ QtObject {
 
     // ── COMPANIONS ──────────────────────────────────────────────
 
-    readonly property bool companionsEnabled: true  // Show companions
+    readonly property bool companionsEnabled: false  // Show companions
 
     // Distance from the right edge in pixels
     readonly property int companionsMarginRight: s(20)
@@ -122,7 +122,7 @@ QtObject {
     }
 
     // System prompt — prepended as a system message on every AI request
-    readonly property string aiSystemPrompt: "You are a helpful assistant integrated into a Hyprland desktop shell."
+    readonly property string aiSystemPrompt: "You are a helpful assistant integrated into a Unit-3. Unit-3 is a desktop configuration based on hyprland"
 
     // AI panel vertical position (0.0 = top, 1.0 = bottom)
     readonly property real aiPanelPositionY: 0.10
@@ -132,4 +132,11 @@ QtObject {
 
     // Font size for chat messages in pixels (base size before scaling)
     readonly property int aiChatFontSize: 11
+
+
+    // ── SHORTCUTS (must also be declared in hyprland.conf) ──────
+    //   SUPER+SHIFT+M  →  echo t >> /tmp/qs-toggle    (show/hide player)
+    //   SUPER+SHIFT+F  →  echo t >> /tmp/qs-front     (foreground / background)
+    //   SUPER+SHIFT+A  →  qs ipc call ai toggle        (show/hide AI panel)
+
 }

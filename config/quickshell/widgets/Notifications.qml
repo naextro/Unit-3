@@ -427,27 +427,15 @@ Scope {
                 z: 2
             }
 
-            // Decorative internal grid
-            Canvas {
+            // Decorative internal grid (GPU-tiled pattern)
+            Image {
                 anchors.fill: parent
                 anchors.leftMargin: 3
                 opacity: 0.18
                 z: 0
-                onPaint: {
-                    const ctx = getContext("2d");
-                    ctx.strokeStyle = "rgba(70, 63, 46, 0.25)";
-                    ctx.lineWidth = 1;
-                    for (let x = 0; x < width; x += 16) {
-                        ctx.beginPath();
-                        ctx.moveTo(x, 0); ctx.lineTo(x, height);
-                        ctx.stroke();
-                    }
-                    for (let y = 0; y < height; y += 16) {
-                        ctx.beginPath();
-                        ctx.moveTo(0, y); ctx.lineTo(width, y);
-                        ctx.stroke();
-                    }
-                }
+                source: "file://" + Quickshell.env("HOME") + "/.config/quickshell/assets/grid.png"
+                fillMode: Image.Tile
+                smooth: false
             }
 
             ColumnLayout {

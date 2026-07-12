@@ -16,6 +16,18 @@ ShellRoot {
     property bool   hiding:    false   // hide video in progress
     property bool   done:      false   // all completed
 
+    // ── Safety Exit Timer ──
+    Timer {
+        id: safetyExitTimer
+        interval: 1500
+        running: root.hiding
+        repeat: false
+        onTriggered: {
+            console.log("lockscreen: Safety exit triggered")
+            Qt.quit()
+        }
+    }
+
     // ── Paths génériques (portables) ──
     property string home:          Quickshell.env("HOME")
     property string xdgConfigHome: Quickshell.env("XDG_CONFIG_HOME") || (home + "/.config")
@@ -229,7 +241,7 @@ ShellRoot {
                     height:18;z:5;opacity:parent.uiOp;clip:true
                     Text {
                         id:tickTxt
-                        text:"SYSTEM SCAN · OK ▸ MEMORY INTEGRITY · VERIFIED ▸ SESSION LOCKED · SECURE ▸ NETWORK · STABLE ▸ THERMAL · NOMINAL ▸ AUTH DAEMON · LISTENING ▸   || FREE PALESTINE  "
+                        text:"SYSTEM SCAN · OK ▸ MEMORY INTEGRITY · VERIFIED ▸ SESSION LOCKED · SECURE ▸ NETWORK · STABLE ▸ THERMAL · NOMINAL ▸ AUTH DAEMON · LISTENING ▸   || FREE PALESTINE // FUCK ISRAEL  "
                         font.family:"Share Tech Mono";font.pixelSize:8;font.letterSpacing:3;color:"#463f2e";y:2
                         NumberAnimation on x { from:modelData.width; to:-tickTxt.implicitWidth; duration:55000; loops:Animation.Infinite; running:root.frozen }
                     }
@@ -412,7 +424,7 @@ ShellRoot {
                         panelHide.start()
                         hide.position = 0
                         hide.play()
-                        if (isPrimary) hideFadeTimer.restart()
+                        hideFadeTimer.restart()
                     }
                 }
                 function onRevealingChanged() {

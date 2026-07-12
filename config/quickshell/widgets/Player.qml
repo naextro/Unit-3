@@ -90,7 +90,7 @@ Item {
                         y: 3
                         NumberAnimation on x {
                             from: 320; to: -ticker.implicitWidth
-                            duration: 22000; loops: Animation.Infinite; running: true
+                            duration: 22000; loops: Animation.Infinite; running: root.shown
                         }
                     }
                     Rectangle {
@@ -428,20 +428,20 @@ Item {
                                     // Marquee reveal — starts at resting position (x=0),
                                     // scrolls left to reveal the overflow, pauses, resets
                                     SequentialAnimation on x {
-                                        running: ciTitle.implicitWidth > ciTitleClip.width
+                                        running: ciTitle.implicitWidth > ciTitleClip.width && root.shown
                                         loops:   Animation.Infinite
 
                                         PauseAnimation { duration: 900 }
                                         NumberAnimation {
                                             from: 0
                                             to:   -(ciTitle.implicitWidth - ciTitleClip.width)
-                                            duration: (ciTitle.implicitWidth - ciTitleClip.width) / (root.tickerSpeed * 0.5)
+                                            duration: Math.max(1, (ciTitle.implicitWidth - ciTitleClip.width)) / (root.tickerSpeed * 0.5)
                                             easing.type: Easing.Linear
                                         }
                                         PauseAnimation { duration: 900 }
                                         NumberAnimation {
                                             to: 0
-                                            duration: (ciTitle.implicitWidth - ciTitleClip.width) / (root.tickerSpeed * 0.5)
+                                            duration: Math.max(1, (ciTitle.implicitWidth - ciTitleClip.width)) / (root.tickerSpeed * 0.5)
                                             easing.type: Easing.Linear
                                         }
                                     }
@@ -468,20 +468,20 @@ Item {
                                     color: Qt.rgba(200/255,184/255,154/255,0.42)
 
                                     SequentialAnimation on x {
-                                        running: ciArtist.implicitWidth > ciArtistClip.width
+                                        running: ciArtist.implicitWidth > ciArtistClip.width && root.shown
                                         loops:   Animation.Infinite
 
                                         PauseAnimation { duration: 900 }
                                         NumberAnimation {
                                             from: 0
                                             to:   -(ciArtist.implicitWidth - ciArtistClip.width)
-                                            duration: (ciArtist.implicitWidth - ciArtistClip.width) / (root.tickerSpeed * 0.5)
+                                            duration: Math.max(1, (ciArtist.implicitWidth - ciArtistClip.width)) / (root.tickerSpeed * 0.5)
                                             easing.type: Easing.Linear
                                         }
                                         PauseAnimation { duration: 900 }
                                         NumberAnimation {
                                             to: 0
-                                            duration: (ciArtist.implicitWidth - ciArtistClip.width) / (root.tickerSpeed * 0.5)
+                                            duration: Math.max(1, (ciArtist.implicitWidth - ciArtistClip.width)) / (root.tickerSpeed * 0.5)
                                             easing.type: Easing.Linear
                                         }
                                     }
@@ -662,7 +662,7 @@ Item {
                                     ? Qt.rgba(88/255,158/255,110/255,0.55)
                                     : Qt.rgba(200/255,184/255,154/255,0.15)
                                 SequentialAnimation on opacity {
-                                    running: root.mpPlaying; loops: Animation.Infinite
+                                    running: root.mpPlaying && root.shown; loops: Animation.Infinite
                                     NumberAnimation { to: 0; duration: 700 }
                                     NumberAnimation { to: 1; duration: 700 }
                                 }
@@ -880,7 +880,7 @@ Item {
 
     // ── CLOCK ──
     Timer {
-        interval: 1000; running: true; repeat: true
+        interval: 1000; running: root.shown; repeat: true
         onTriggered: {
             var d = new Date()
             root.clockStr = String(d.getHours()).padStart(2,"0") + ":"
@@ -896,6 +896,8 @@ Item {
             hideAnim.start()
         } else {
             root.shown = true
+            var d = new Date()
+            root.clockStr = String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0")
             hideAnim.stop()
             revealAnim.start()
         }

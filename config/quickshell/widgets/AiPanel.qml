@@ -104,7 +104,7 @@ Item {
                         y: 3
                         NumberAnimation on x {
                             from: root.pw; to: -aiTicker.implicitWidth
-                            duration: 22000; loops: Animation.Infinite; running: true
+                            duration: 22000; loops: Animation.Infinite; running: root.shown
                         }
                     }
                     Rectangle {
@@ -352,7 +352,7 @@ Item {
                                         width: s(4); height: s(4)
                                         color: Qt.rgba(96/255,168/255,128/255,0.5)
                                         SequentialAnimation on opacity {
-                                            running: root.loading; loops: Animation.Infinite
+                                            running: root.loading && root.shown; loops: Animation.Infinite
                                             NumberAnimation { to: 0.2; duration: 400 }
                                             NumberAnimation { to: 1.0; duration: 400 }
                                         }
@@ -366,7 +366,7 @@ Item {
                                         font.letterSpacing: 1
                                         color: Qt.rgba(96/255,168/255,128/255,0.4)
                                         SequentialAnimation on opacity {
-                                            running: root.loading; loops: Animation.Infinite
+                                            running: root.loading && root.shown; loops: Animation.Infinite
                                             NumberAnimation { to: 0.4; duration: 600 }
                                             NumberAnimation { to: 1.0; duration: 600 }
                                         }
@@ -520,7 +520,7 @@ Item {
                                     ? Qt.rgba(200/255, 168/255, 96/255, 0.55)
                                     : Qt.rgba(88/255, 158/255, 110/255, 0.55)
                                 SequentialAnimation on opacity {
-                                    running: root.loading; loops: Animation.Infinite
+                                    running: root.loading && root.shown; loops: Animation.Infinite
                                     NumberAnimation { to: 0; duration: 500 }
                                     NumberAnimation { to: 1; duration: 500 }
                                 }
@@ -677,7 +677,7 @@ Item {
 
     // ── CLOCK ──
     Timer {
-        interval: 1000; running: true; repeat: true
+        interval: 1000; running: root.shown; repeat: true
         onTriggered: {
             var d = new Date()
             root.clockStr = String(d.getHours()).padStart(2,"0") + ":"
@@ -695,6 +695,8 @@ Item {
             hideAnim.start()
         } else {
             root.shown = true
+            var d = new Date()
+            root.clockStr = String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0")
             hideAnim.stop()
             revealAnim.start()
         }
