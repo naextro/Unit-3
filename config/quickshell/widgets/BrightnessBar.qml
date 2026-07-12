@@ -4,13 +4,10 @@ import Quickshell.Io
 import Quickshell.Wayland
 
 // ═════════════════════════════════════════════════════════════════════
-//   Vertical volume bar — left edge
+//   Vertical brightness bar — right edge
+//   - Same logic as the volume bar but for brightnessctl
 //   - 30 segments morphing square (empty) ↔ thin bar (filled)
 //   - Scroll / click / drag
-//   - PulseAudio control via pactl (compatible with pavucontrol)
-//   - Active screen only
-//   - Click-through outside active area: the panel itself changes
-//     width and height to cover only what is useful.
 // ═════════════════════════════════════════════════════════════════════
 
 ShellRoot {
@@ -21,7 +18,7 @@ ShellRoot {
     readonly property int hoverWidth: 65
     readonly property int barWidth: 40
     readonly property int barHeight: 420
-    readonly property int leftOffset: 18
+    readonly property int rightOffset: 18
     readonly property int hideDelay: 400
 
     readonly property int segFilledW: 14
@@ -35,9 +32,8 @@ ShellRoot {
     readonly property color colEmpty:  "#c8b89a"
     readonly property color colBg:     "#0f0d0a"
 
-    // ── Volume state ──
-    property real volume: 0.5
-    property bool muted: false
+    // ── Brightness state ──
+    property real brightness: 0.5
     property bool userInteracting: false
 
     // ── Active screen ──
@@ -58,42 +54,35 @@ ShellRoot {
         }
     }
 
-    // ── Poll volume ──
+    // ── Poll brightness ──
     Timer {
         interval: 500; running: true; repeat: true
-        onTriggered: if (!root.userInteracting) getVolProc.running = true
+        onTriggered: if (!root.userInteracting) getBrightnessProc.running = true
     }
     Process {
-        id: getVolProc
-        command: ["sh","-c","pactl get-sink-volume @DEFAULT_SINK@ | grep -oP '\\d+(?=%)' | head -1; pactl get-sink-mute @DEFAULT_SINK@ | grep -oP '(yes|no)'"]
+        id: getBrightnessProc
+        // brightnessctl -m gives: class,name,current,pct,max
+        command: ["sh","-c","brightnessctl -m | awk -F, '{print $4}' | tr -d '%'"]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {
-                var lines = this.text.trim().split("\n")
-                if (lines.length >= 1) {
-                    var v = parseInt(lines[0])
-                    if (!isNaN(v)) root.volume = Math.max(0, Math.min(1, v / 100))
-                }
-                if (lines.length >= 2) root.muted = (lines[1] === "yes")
+                var v = parseInt(this.text.trim())
+                if (!isNaN(v)) root.brightness = Math.max(0, Math.min(1, v / 100))
             }
         }
     }
 
-    function setVolume(v) {
+    function setBrightness(v) {
         v = Math.max(0, Math.min(1, v))
-        root.volume = v
+        root.brightness = v
         var pct = Math.round(v * 100)
-        setVolProc.command = ["pactl","set-sink-volume","@DEFAULT_SINK@", pct + "%"]
-        setVolProc.running = true
+        setBrightnessProc.command = ["brightnessctl","set", pct + "%"]
+        setBrightnessProc.running = true
     }
-    Process { id: setVolProc; command: ["sh","-c","true"]; running: false }
+    Process { id: setBrightnessProc; command: ["sh","-c","true"]; running: false }
 
     // ═══════════════════════════════════
-    //   Only one PanelWindow per screen
-    //   - FIXED height: barHeight (plus label area), vertically centered
-    //   - Dynamic width: hoverWidth when hidden, wide when revealed
-    //   Everything outside this zone is native click-through
-    //   (no panel = no event capture).
+    //   Only one PanelWindow per screen — right edge
     // ═══════════════════════════════════
     Variants {
         model: Quickshell.screens
@@ -109,24 +98,19 @@ ShellRoot {
 
             readonly property bool isActive: modelData.name === root.activeMonitor
 
-            // Revealed state: hover on one of the zones or interaction
             property bool revealed: hoverArea.containsMouse
                                   || barMouseArea.containsMouse
                                   || barMouseArea.pressed
                                   || hideTimer.running
 
-            // Width: just the hover zone when hidden, extended when revealed
-            // Height: always that of the bar (+ margin for label)
             implicitWidth: revealed
-                ? (root.leftOffset + root.barWidth + 10)
+                ? (root.rightOffset + root.barWidth + 10)
                 : root.hoverWidth
             implicitHeight: root.barHeight + 40
 
-            // Vertically centered
             //margins.top: (modelData.height - implicitHeight) / 2
-            // Anchored at top, right side
-            anchors.top: true
-            margins.top: 90
+            anchors.bottom: true
+            margins.bottom: 90
             visible: isActive
 
             Timer {
@@ -134,8 +118,8 @@ ShellRoot {
                 interval: root.hideDelay
                 repeat: false
             }
-            
-            // ── Hover zone at edge (always active) ──
+
+            // ── Hover area at the right edge ──
             MouseArea {
                 id: hoverArea
                 hoverEnabled: true
@@ -148,20 +132,20 @@ ShellRoot {
                 onExited:  hideTimer.restart()
             }
 
-            // ── The bar (appears to the right of the hover zone) ──
+            // ── The bar (appears to the left of the hover area) ──
             Item {
                 id: barContainer
                 width: root.barWidth
                 height: root.barHeight
                 anchors.verticalCenter: parent.verticalCenter
-                //x: panel.revealed ? root.leftOffset : -root.barWidth
-                x: panel.revealed ? (parent.width - root.leftOffset - root.barWidth) : parent.width
+                x: panel.revealed
+                    ? (parent.width - root.rightOffset - root.barWidth)
+                    : parent.width
                 opacity: panel.revealed ? 1 : 0
 
                 Behavior on x       { NumberAnimation { duration: 280; easing.type: Easing.OutCubic } }
                 Behavior on opacity { NumberAnimation { duration: 220 } }
 
-                // Background
                 Rectangle {
                     anchors.fill: parent
                     color: root.colBg
@@ -170,7 +154,6 @@ ShellRoot {
                     border.width: 1
                 }
 
-                // Segments
                 Column {
                     anchors.fill: parent
                     anchors.margins: 6
@@ -183,9 +166,9 @@ ShellRoot {
                             height: (root.barHeight - 12 - (root.segments - 1) * 2) / root.segments
 
                             property real segLevel: 1 - (index / (root.segments - 1))
-                            property bool filled: root.volume >= segLevel - 0.0001
+                            property bool filled: root.brightness >= segLevel - 0.0001
                             property real segStep: 1 / (root.segments - 1)
-                            property bool active: filled && (root.volume < segLevel + segStep - 0.0001)
+                            property bool active: filled && (root.brightness < segLevel + segStep - 0.0001)
 
                             Rectangle {
                                 anchors.centerIn: parent
@@ -196,9 +179,7 @@ ShellRoot {
                                       : parent.filled ? root.segFilledH
                                       :                 root.segEmptyH
                                 radius: parent.filled ? 1 : 0
-                                color: parent.filled
-                                       ? (root.muted ? "#6e2a2a" : root.colFilled)
-                                       : root.colEmpty
+                                color: parent.filled ? root.colFilled : root.colEmpty
 
                                 Behavior on width   { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
                                 Behavior on height  { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
@@ -216,7 +197,7 @@ ShellRoot {
                     hoverEnabled: true
                     acceptedButtons: Qt.LeftButton
 
-                    function yToVolume(y) {
+                    function yToBrightness(y) {
                         var m = 6
                         var h = height - 2 * m
                         return Math.max(0, Math.min(1, 1 - (y - m) / h))
@@ -227,26 +208,26 @@ ShellRoot {
 
                     onPressed: function(e) {
                         root.userInteracting = true
-                        root.setVolume(yToVolume(e.y))
+                        root.setBrightness(yToBrightness(e.y))
                     }
                     onReleased: root.userInteracting = false
                     onPositionChanged: function(e) {
-                        if (pressed) root.setVolume(yToVolume(e.y))
+                        if (pressed) root.setBrightness(yToBrightness(e.y))
                     }
                     onWheel: function(e) {
                         var step = 0.08
-                        if (e.angleDelta.y > 0) root.setVolume(root.volume + step)
-                        else                    root.setVolume(root.volume - step)
+                        if (e.angleDelta.y > 0) root.setBrightness(root.brightness + step)
+                        else                    root.setBrightness(root.brightness - step)
                         hideTimer.restart()
                     }
                 }
 
-                // % label at top
+                // % label at the top
                 Text {
                     anchors.top: parent.top
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.topMargin: -16
-                    text: root.muted ? "MUTE" : Math.round(root.volume * 100) + "%"
+                    text: Math.round(root.brightness * 100) + "%"
                     font.family: "Share Tech Mono"
                     font.pixelSize: 9
                     font.letterSpacing: 2

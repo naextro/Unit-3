@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════════════
 #   Unit-3 installer — Hyprland + Quickshell + Waybar rice
-#   Usage: bash <(curl -fsSL https://raw.githubusercontent.com/samyns/Unit-3/main/install.sh)
+#   Usage: bash <(curl -fsSL https://raw.githubusercontent.com/naextro/Unit-3/main/install.sh)
 # ═══════════════════════════════════════════════════════════════════
 set -euo pipefail
 
 # ─── Configuration ──────────────────────────────────────────────────
-readonly REPO_URL="https://github.com/samyns/Unit-3.git"
+readonly REPO_URL="https://github.com/naextro/Unit-3.git"
 readonly REPO_BRANCH="${UNIT3_BRANCH:-main}"
 readonly CLONE_DIR="${TMPDIR:-/tmp}/Unit-3-install-$$"
 BACKUP_DIR="$HOME/.config-backup-$(date +%Y%m%d-%H%M%S)"
@@ -474,7 +474,7 @@ finalize() {
     fi
     echo
     echo "  ${C_BOLD}Docs & support:${C_RESET}"
-    echo "    https://github.com/samyns/Unit-3#readme"
+    echo "    https://github.com/naextro/Unit-3#readme"
     echo
 }
 

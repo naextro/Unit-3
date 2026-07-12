@@ -1,17 +1,12 @@
 > [!WARNING]
 > **Hyprland v0.55+ Lua migration** — This config uses legacy hyprlang syntax (supported until ~v0.57). Pin to v0.54 or wait for the Lua port. 
 
-# Unit-3
+# Unit-3 (Forked from samyns/unit-3)
 
 Hyprland + Quickshell + Waybar rice for Arch Linux, with a NieR:Automata aesthetic.
 
 
-## Support
 
-[![Ko-fi](https://img.shields.io/badge/Ko--fi-FF5E5B?style=for-the-badge&logo=ko-fi&logoColor=white&labelColor=101418)](https://ko-fi.com/samyns)
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black&labelColor=101418)](https://www.buymeacoffee.com/samyns)
-
-A ⭐ on the repo or sharing your own rice in the issues makes me just as happy.
 
 
 # SHOW OFF
@@ -20,11 +15,11 @@ https://github.com/user-attachments/assets/f3366b70-cfa0-46ef-b4f5-e461546364e2
 ## Quick install
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/samyns/Unit-3/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/naextro/Unit-3/main/install.sh)
 ```
 or
 ```
-curl -fsSL https://raw.githubusercontent.com/samyns/Unit-3/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/naextro/Unit-3/main/install.sh | bash
 ```
 
 ## What's included
@@ -34,15 +29,51 @@ curl -fsSL https://raw.githubusercontent.com/samyns/Unit-3/main/install.sh | bas
 - **Bar**: Waybar
 - **Terminal**: Kitty
 - **Theme**: NieR-inspired with custom video transitions
+- **AI Chat Panel**: Custom AI chat panel supporting providers like Ollama, Gemini, Groq, OpenRouter
+
+## Chat Panel
+
+[#chat-panel](#chat-panel)
+
+A NieR:Automata-style AI chat panel accessible via `SUPER + A`. Supports Ollama (local, no API key required), Groq, OpenRouter, and Google Gemini as providers, configurable in `Settings.qml`.
+
+> [!NOTE]
+> The Chat Panel is part of the main Quickshell shell and exposes an IPC target named `ai`. It can also be toggled from anywhere via `qs ipc call ai toggle`.
+
+### Features
+
+[#features-1](#features-1)
+
+- **Multi-provider** — switch between `ollama`, `groq`, `openrouter`, and `gemini` via a single setting
+- **Local-first option** — run fully offline against a local Ollama instance, no API key needed
+- **Custom system prompt** — override the assistant's default behavior/persona
+- **Configurable position & sizing** — anchored to the left edge, adjustable vertical position and font size
+
+### Configuration
+
+[#configuration-1](#configuration-1)
+
+All options live in `Settings.qml` under the **AI PANEL** section:
+
+| Setting | Description |
+| --- | --- |
+| `aiProvider` | Active provider: `"ollama"`, `"groq"`, `"openrouter"`, or `"gemini"` |
+| `ollamaModel` / `ollamaEndpoint` | Local model name and Ollama server URL (default: `http://localhost:11434`) |
+| `groqApiKey` / `groqModel` | Groq API key and model |
+| `openrouterApiKey` / `openrouterModel` | OpenRouter API key and model (default provider) |
+| `geminiApiKey` / `geminiModel` | Google Gemini API key and model |
+| `aiSystemPrompt` | System prompt prepended to every request |
+| `aiPanelPositionY` | Vertical position of the panel (`0.0` = top, `1.0` = bottom) |
+| `aiPanelMarginLeft` | Distance from the left edge, in pixels |
+| `aiChatFontSize` | Base font size for chat messages |
+
 
 ## Control Center
 
 A NieR:Automata-style radial menu accessible via `SUPER + Tab`. The interface is built around a cross of four sub-menus orbiting a central node, with full keyboard navigation.
 
 > [!NOTE]
-> The Control Center runs as a separate Quickshell instance and exposes an IPC target named `ctrl`. It can also be toggled from anywhere via `qs ipc call ctrl toggle`.
-
-https://github-production-user-asset-6210df.s3.amazonaws.com/102748858/590523311-2ce7dc52-bffb-43b9-acf0-cfcdc42aadb8.mp4?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAVCODYLSA53PQK4ZA%2F20260511%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260511T144937Z&X-Amz-Expires=300&X-Amz-Signature=e8595addcfe5bcf43b9f9265de0280b5788952a0f8cdea90e6aa9b2547a7b054&X-Amz-SignedHeaders=host&response-content-type=video%2Fmp4
+> The Control Center is part of the main Quickshell shell and exposes an IPC target named `ctrl`. It can also be toggled from anywhere via `qs ipc call ctrl toggle`.
 
 ### Features
 
@@ -65,7 +96,7 @@ https://github-production-user-asset-6210df.s3.amazonaws.com/102748858/590523311
 
 ### Navigation
 
-The menu uses three focus levels:
+The menu uses two focus levels:
 
 - **L1 — Overview**: navigate between the four slots and the center node
 - **L3 — Settings**: focus inside a sub-menu (sub-item + first action are focused simultaneously)
@@ -98,6 +129,9 @@ bind = SUPER, B, exec, firefox
 | Key | Action |
 |-----|--------|
 | `SUPER` (tap) | Open app menu |
+| `SUPER + Tab` | Toggle Control Center |
+| `SUPER + B` | Browser (tries zen, then firefox) |
+| `SUPER + A` | Ai Chat Panel |
 | `SUPER + L` | Lockscreen |
 | `SUPER + T` | Terminal (kitty) |
 | `SUPER + Return` | Toggle Quickshell player |
@@ -114,19 +148,7 @@ bind = SUPER, B, exec, firefox
 Inspired by [caelestia-dots/shell](https://github.com/caelestia-dots/shell).
 
 Inspired by https://github.com/flickowoa/dotfiles.git 
+
+Forked from https://github.com/samyns/Unit-3
 ## License
-
 MIT
-EOF
-
-## Star History
-
-[![oosmetrics](https://api.oosmetrics.com/api/v1/badge/achievement/e4d18ba3-961a-444a-99fb-aff540f61553.svg)](https://oosmetrics.com/repo/samyns/Unit-3)
-
-<a href="https://www.star-history.com/?repos=samyns%2FUnit-3&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=samyns/Unit-3&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=samyns/Unit-3&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=samyns/Unit-3&type=date&legend=top-left" />
- </picture>
-</a>

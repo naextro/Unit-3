@@ -9,7 +9,7 @@ HOUR=$(date "+%H:%M:%S")
 KERN=$(uname -r | cut -d'-' -f1)
 
 echo ""
-# ASCII figlet slant coloré ligne par ligne
+# ASCII figlet slant colored line by line
 while IFS= read -r line; do
     printf "${ACC}    %s${RESET}\n" "$line"
 done < <(figlet -f slant "Unit - 3")

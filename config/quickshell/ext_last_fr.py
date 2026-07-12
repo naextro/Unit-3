@@ -2,6 +2,7 @@
 
 import cv2
 import sys
+import os
 
 
 video_path = sys.argv[1] if len(sys.argv) > 1 else 'input_video.mp4'
@@ -25,7 +26,8 @@ def get_last_frame(cap):
 def extract_last_frame_from_path(video_path):
     cap = open_video_capture(video_path)
     last_frame = get_last_frame(cap)
-    cv2.imwrite('/home/samyns/.config/quickshell/videos/wave_last_frame.png', last_frame)  # Save the last frame as an image
+    output_path = os.path.join(os.path.expanduser('~'), '.config/quickshell/videos/wave_last_frame.png')
+    cv2.imwrite(output_path, last_frame)  # Save the last frame as an image
     print(video_path)
 
 extract_last_frame_from_path(video_path)

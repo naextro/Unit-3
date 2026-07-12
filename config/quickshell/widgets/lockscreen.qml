@@ -10,11 +10,11 @@ ShellRoot {
     // ── Fast mode (skip reveal animation, used for lid-switch lock) ──
     property bool fastMode: Quickshell.env("UNIT3_LOCK_FAST") === "1"
 
-    // ── État partagé ──
-    property bool   revealing: false   // vidéo reveal en cours
-    property bool   frozen:    false   // reveal freezée sur dernière frame
-    property bool   hiding:    false   // vidéo hide en cours
-    property bool   done:      false   // tout terminé
+    // ── Shared state ──
+    property bool   revealing: false   // reveal video in progress
+    property bool   frozen:    false   // reveal frozen on last frame
+    property bool   hiding:    false   // hide video in progress
+    property bool   done:      false   // all completed
 
     // ── Paths génériques (portables) ──
     property string home:          Quickshell.env("HOME")
@@ -43,7 +43,7 @@ ShellRoot {
             if (this.text.trim() === "OK") {
                 root.lockInput = ""
                 root.lockError = false
-                root.doHide()   // auth OK → lancer hide
+                root.doHide()   // auth OK -> launch hide
             } else {
                 root.lockError = true
                 root.lockInput = ""
@@ -140,7 +140,7 @@ ShellRoot {
                 loops: 1
                 autoPlay: false
                 onMediaStatusChanged: function() {
-                    // Fermeture gérée par hideFadeAnim.onFinished
+                    // Closure managed by hideFadeAnim.onFinished
                 }
             }
             VideoOutput {
@@ -151,7 +151,7 @@ ShellRoot {
                 opacity: 1.0
             }
 
-            // Fade + fermeture 1s avant la fin de hide
+            // Fade + close 1s before end of hide
             Timer {
                 id: hideFadeTimer
                 interval: 800
@@ -219,7 +219,7 @@ ShellRoot {
                     anchors { bottom:parent.bottom; right:parent.right; bottomMargin:28; rightMargin:30 }
                     z:5; opacity:parent.uiOp
                     Column { spacing:2
-                        Text{text:"ARCH LINUX · RX 6700 XT";font.family:"Share Tech Mono";font.pixelSize:9;font.letterSpacing:2;color:"#463f2e";width:220;horizontalAlignment:Text.AlignRight}
+                        Text{text:"ARCH LINUX · Intel HD 520";font.family:"Share Tech Mono";font.pixelSize:9;font.letterSpacing:2;color:"#463f2e";width:220;horizontalAlignment:Text.AlignRight}
                     }
                 }
 
@@ -229,13 +229,13 @@ ShellRoot {
                     height:18;z:5;opacity:parent.uiOp;clip:true
                     Text {
                         id:tickTxt
-                        text:"SYSTEM SCAN · OK ▸ MEMORY INTEGRITY · VERIFIED ▸ SESSION LOCKED · SECURE ▸ NETWORK UPLINK · STABLE ▸ THERMAL · NOMINAL ▸ AUTH DAEMON · LISTENING ▸ "
+                        text:"SYSTEM SCAN · OK ▸ MEMORY INTEGRITY · VERIFIED ▸ SESSION LOCKED · SECURE ▸ NETWORK · STABLE ▸ THERMAL · NOMINAL ▸ AUTH DAEMON · LISTENING ▸   || FREE PALESTINE  "
                         font.family:"Share Tech Mono";font.pixelSize:8;font.letterSpacing:3;color:"#463f2e";y:2
                         NumberAnimation on x { from:modelData.width; to:-tickTxt.implicitWidth; duration:55000; loops:Animation.Infinite; running:root.frozen }
                     }
                 }
 
-                // Panel central — slide depuis le haut (sauf en fast mode)
+                // Central panel — slide from the top (except in fast mode)
                 Item {
                     id: panelHost
                     width: 380
@@ -454,7 +454,7 @@ ShellRoot {
         }
     }
 
-    // Horloge
+    // Clock
     property string clockStr:  "--:--"
     property string dateStr:   "---- / -- / --"
     property string clockFull: "--:--:--"
@@ -462,9 +462,13 @@ ShellRoot {
         interval:1000;running:true;repeat:true
         onTriggered:{
             var d=new Date(),p=function(x){return String(x).padStart(2,"0")}
-            root.clockStr  = p(d.getHours())+":"+p(d.getMinutes())
-            root.clockFull = p(d.getHours())+":"+p(d.getMinutes())+":"+p(d.getSeconds())
+            var h24 = d.getHours()
+            var ampm = h24 >= 12 ? "PM" : "AM"
+            var h12 = h24 % 12
+            if (h12 === 0) h12 = 12
+            root.clockStr  = p(h12)+":"+p(d.getMinutes())+" "+ampm
+            root.clockFull = p(h12)+":"+p(d.getMinutes())+":"+p(d.getSeconds())+" "+ampm
             root.dateStr   = d.getFullYear()+" / "+p(d.getMonth()+1)+" / "+p(d.getDate())
+            }
         }
-    }
 }

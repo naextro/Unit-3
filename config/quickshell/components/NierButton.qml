@@ -1,7 +1,7 @@
 import QtQuick
 
-// Bouton NieR : fill-slide hover + flash au clic
-// Usage :
+// NieR button: hover fill slide + flash on click
+// Usage:
 //   NierButton { label: "PLAY"; onClicked: doSomething() }
 
 Item {
@@ -14,15 +14,15 @@ Item {
     property color  borderColor: Qt.rgba(200/255, 184/255, 154/255, 0.18)
     property int    fontSize:   8
     property real   letterSpacing: 1.5
-    property int    padH:       12   // padding horizontal
-    property int    padV:       5    // padding vertical
+    property int    padH:       12   // horizontal padding
+    property int    padV:       5    // vertical padding
 
     signal clicked
 
     implicitWidth:  label_text.implicitWidth + padH * 2
     implicitHeight: label_text.implicitHeight + padV * 2
 
-    // Bordure
+    // Border
     Rectangle {
         anchors.fill: parent
         color:        "transparent"
@@ -30,7 +30,7 @@ Item {
         border.width: 1
     }
 
-    // Fill slide (de gauche à droite)
+    // Hover fill slide (left to right)
     Rectangle {
         id:     fillRect
         anchors {
@@ -49,7 +49,7 @@ Item {
         }
     }
 
-    // Flash au clic
+    // Flash on click
     Rectangle {
         id:      clickFlash
         anchors.fill: parent
@@ -81,7 +81,7 @@ Item {
             ColorAnimation { duration: 150 }
         }
 
-        // Positionnement z-order au-dessus du fill
+        // Z-order positioning above the fill
         z: 1
     }
 

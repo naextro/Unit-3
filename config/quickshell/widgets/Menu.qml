@@ -11,7 +11,7 @@ Item {
     property real screenH: 1080
 
     property bool   menuOpen:        false
-    property bool   wipeHideRunning: false  // reste true pendant l'animation de fermeture
+    property bool   wipeHideRunning: false  // remains true during the close animation
     property string currentCat: "all"
     property string searchQuery: ""
     property int    focusIdx:   0
@@ -56,7 +56,7 @@ Item {
         })
     }
 
-    // ── Lecture .desktop ──
+    // ── Read .desktop ──
     Process {
         id: desktopReader
         command: ["bash", Qt.resolvedUrl("../list-apps.sh").toString().replace("file://","")]
@@ -75,7 +75,7 @@ Item {
                     var cats      = parts[2] || ""
                     var rawExec   = (parts[3] || "").replace(/%[A-Za-z]/g,"").trim()
                     if (!name || !desktopId) continue
-                    // Utiliser l'exec brut si dispo, sinon le desktop ID
+                    // Use raw exec if available, otherwise the desktop ID
                     var launchCmd = rawExec || desktopId
 
                     var cat = "other"
@@ -121,7 +121,7 @@ Item {
         }
     }
 
-    // Un seul Process — sh -c pour tout
+    // Single Process — sh -c for everything
     Process {
         id: launchProc
         property string pending: ""
@@ -137,7 +137,7 @@ Item {
         root.closeMenu()
     }
 
-    // Lancer une commande directe (footer)
+    // Launch a direct command (footer)
     function launch(cmd) {
         if (!cmd || cmd === "") return
         launchProc.pending = "nohup " + cmd + " > /dev/null 2>&1 &"
@@ -196,14 +196,14 @@ Item {
         clip:   true
         visible: root.menuOpen || wipeReveal.running || wipeHide.running
 
-        // Contenu
+        // Content
         Rectangle {
             id:     panelContent
             anchors.fill: parent
             color:  root.paper
             border.color: root.ink; border.width: 1
 
-            // Grille fine
+            // Fine grid
             Repeater {
                 model: Math.floor(root.lw/20)+1
                 Rectangle { x:index*20; y:0; width:1; height:root.lh; color:root.lineVsoft }
@@ -213,7 +213,7 @@ Item {
                 Rectangle { x:0; y:index*20; width:root.lw; height:1; color:root.lineVsoft }
             }
 
-            // Clic n'importe où → focus sur search
+            // Click anywhere -> focus on search
             MouseArea {
                 anchors.fill: parent; z: -1
                 onClicked: searchInput.forceActiveFocus()
@@ -564,7 +564,7 @@ Item {
             }
         }
 
-        // Wipe curtain — frère du contenu
+        // Wipe curtain — sibling of the content
         Rectangle {
             id:wipeCurtain
             anchors{top:parent.top;bottom:parent.bottom}
@@ -572,7 +572,7 @@ Item {
         }
     }
 
-    // ── ANIMATIONS WIPE ──
+    // ── WIPE ANIMATIONS ──
     SequentialAnimation {
         id: wipeReveal
         onStarted: {
@@ -619,7 +619,7 @@ Item {
         searchQuery = ""
         focusIdx    = 0
         currentCat  = "all"
-        // Sync TextInput text avec la property vide
+        // Sync TextInput text with the empty property
         searchInput.text = ""
         if (!appsLoaded) desktopReader.running = true
         wipeHide.stop()

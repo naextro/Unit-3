@@ -5,14 +5,16 @@ import "../settings"
 
 Item {
     id: root
-
-    // ── Shorthand Settings (scale global) ──
+    // Reference speed taken from the ticker (px/ms) — used to derive the
+    // title/artist scroll speed at 0.5x (i.e. half as fast)
+    readonly property real tickerSpeed: (pw + ticker.implicitWidth) / 22000
+    // ── Shorthand Settings (global scale) ──
     readonly property int  pw:      Settings.playerWidth
     readonly property real sc:      Settings.scale
     readonly property int  coverSz: Math.round(pw * 100/320)
     function s(px) { return Math.round(px * sc) }
 
-    // ── Bindings playerctl depuis shell.qml ──
+    // ── playerctl bindings from shell.qml ──
     property string mpTitle:    "END OF EVANGELION"
     property string mpArtist:   "NEON GENESIS // ANNO"
     property string mpCoverUrl: ""
@@ -27,30 +29,31 @@ Item {
     property bool   shown:    false
     property string clockStr: "--:--"
     property bool   expOpen:  false
+    readonly property bool animRunning: hideAnim.running || revealAnim.running
 
-    // Largeur fixe 320, hauteur = contenu
+    // Fixed width 320, height = content
     implicitWidth:  pw
     implicitHeight: wipeHost.height
 
     // ──────────────────────────────────────────────────────────────
-    // WIPE HOST — Item clipé contenant rideau + contenu comme frères
+    // WIPE HOST — clipped Item containing curtain + content as siblings
     // ──────────────────────────────────────────────────────────────
     Item {
         id:      wipeHost
         width:   pw
         height:  content.implicitHeight
         clip:    true
-        x:       pw+2          // commence hors-écran à droite (caché)
+        x:       pw+2          // starts off-screen to the right (hidden)
         opacity: 1
-        visible: false          // invisible au démarrage
+        visible: false          // invisible at startup
 
-        // ── CONTENU (player réel) ──
+        // ── CONTENT (actual player) ──
         Item {
             id:      content
             width:   pw
             implicitHeight: playerCol.implicitHeight
 
-            // Fond conditionnel — contrôlé par Settings.playerBackground
+            // Conditional background — controlled by Settings.playerBackground
             Rectangle {
                 anchors.fill: parent
                 color:        Settings.playerBackground ? Settings.playerBgColor : "transparent"
@@ -61,7 +64,7 @@ Item {
                 id:    playerCol
                 width: pw
 
-                // Ligne du haut — dégradé sépia
+                // Top line — sepia gradient
                 Rectangle {
                     width: pw;  height: 1
                     gradient: Gradient {
@@ -73,7 +76,7 @@ Item {
                     }
                 }
 
-                // Ticker défilant
+                // Scrolling ticker
                 Item {
                     width: pw;  height: s(14); clip: true
                     Text {
@@ -101,33 +104,33 @@ Item {
                 Item {
                     width: pw;  height: coverSz
 
-                    // Bordure bas
+                    // Bottom border
                     Rectangle {
                         anchors.bottom: parent.bottom
                         width: parent.width; height: 1
                         color: Qt.rgba(200/255,184/255,154/255,0.07)
                     }
 
-                    // Cover 100×100 — grille 32×32 niveaux de gris
+                    // Cover 100×100 — 32×32 grayscale grid
                     Item {
                         id:     coverArea
                         width:  coverSz; height: coverSz; clip: true
 
-                        // État brush — déclaré avant les Canvas qui les référencent
+                        // Brush state — declared before the Canvases that reference them
                         property var hoverIntensity: new Array(32*32).fill(0)
                         property var hoverR:         new Array(32*32).fill(200)
                         property var hoverG:         new Array(32*32).fill(184)
                         property var hoverB:         new Array(32*32).fill(154)
 
-                        // Canvas cover gris — drawGray + drawBlocky pour transition
+                        // Gray cover canvas — drawGray + drawBlocky for transition
                         Canvas {
                             id:     coverMain
                             width:  coverSz; height: coverSz
                             smooth: false
 
                             property var  imgPixels:     null
-                            property var  nextImgPixels: null  // pixels en attente pendant transition
-                            property int  blockStep:     0     // étape transition 0=normal
+                            property var  nextImgPixels: null  // pixels waiting during transition
+                            property int  blockStep:     0     // transition step 0=normal
                             
 
                             onPaint: {
@@ -137,7 +140,7 @@ Item {
                                 ctx.clearRect(0, 0, SZ, SZ)
 
                                 if (!imgPixels) {
-                                    // placeholder gris procédural
+                                    // procedural gray placeholder
                                     var seed = root.mpTitle.length * 1234567 + root.mpArtist.length * 89 + 42
                                     function rand() { seed=(seed*16807+0)%2147483647; return(seed-1)/2147483646 }
                                     for (var r=0; r<GRID; r++) for (var cc=0; cc<GRID; cc++) {
@@ -150,10 +153,10 @@ Item {
                                     return
                                 }
 
-                                // Taille de bloc selon l'étape de transition
+                                // Block size according to transition step
                                 var bs
                                 if (blockStep === 0) {
-                                    // Normal : grille 32×32
+                                    // Normal: 32×32 grid
                                     bs = Math.floor(CELL)
                                 } else {
                                     bs = Math.floor(CELL) + blockStep
@@ -184,9 +187,9 @@ Item {
                             }
                         }
 
-                        // Timer transition blocky — 12 étapes à 30ms chacune
-                        // Identique à transitionCover() dans le JS HTML source
-                        // CELL=3.125 → steps 0-5 grossissent, step 6 swap, 7-12 rétrécissent
+                        // Blocky transition timer — 12 steps of 30ms each
+                        // Identical to transitionCover() in the source HTML JS
+                        // CELL=3.125 → steps 0-5 grow, step 6 swap, 7-12 shrink
                         Timer {
                             id:       blockTimer
                             interval: 30
@@ -199,17 +202,17 @@ Item {
                                 var CELL = 100.0 / 32.0
                                 step++
                                 if (step < steps/2) {
-                                    // Phase 1 : grossir les blocs (dézoom)
+                                    // Phase 1: grow the blocks (zoom out)
                                     coverMain.blockStep = Math.floor(step * 3)
                                     coverMain.requestPaint()
                                 } else if (step === Math.floor(steps/2)) {
-                                    // Milieu : swap vers nouvelle image
+                                    // Midpoint: swap to new image
                                     if (coverMain.nextImgPixels) {
                                         coverMain.imgPixels = coverMain.nextImgPixels
                                         coverMain.nextImgPixels = null
                                     }
                                 } else {
-                                    // Phase 2 : réduire les blocs (rezoom)
+                                    // Phase 2: shrink the blocks (zoom back in)
                                     coverMain.blockStep = Math.max(0, Math.floor((steps - step) * 3))
                                     coverMain.requestPaint()
                                 }
@@ -223,18 +226,18 @@ Item {
                             }
                         }
 
-                        // Image visible pour grabToImage
+                        // Visible image for grabToImage
                         Image {
                             id:       coverSrc
                             width:    coverSz; height: coverSz
-                            visible:  true; opacity: 0  // visible mais transparent pour grabToImage
+                            visible:  true; opacity: 0  // visible but transparent for grabToImage
                             smooth:   false
                             fillMode: Image.PreserveAspectCrop
                             z:        -1
 
                             onStatusChanged: {
                                 if (status !== Image.Ready) return
-                                // grabToImage extrait les pixels vers un canvas
+                                // grabToImage extracts pixels into a canvas
                                 grabToImage(function(result) {
                                     extractCanvas.grabResult = result
                                     extractCanvas.requestPaint()
@@ -255,11 +258,11 @@ Item {
                                 ctx.drawImage(grabResult.url, 0, 0, 100, 100)
                                 var raw = ctx.getImageData(0, 0, 100, 100).data
                                 if (coverMain.imgPixels === null) {
-                                    // Première cover : affichage direct sans transition
+                                    // First cover: direct display without transition
                                     coverMain.imgPixels = raw
                                     coverMain.requestPaint()
                                 } else {
-                                    // Changement de cover : transition blocky
+                                    // Cover change: blocky transition
                                     coverMain.nextImgPixels = raw
                                     blockTimer.step = 0
                                     blockTimer.running = true
@@ -285,7 +288,7 @@ Item {
                             }
                         }
 
-                        // Canvas brush hover couleur
+                        // Hover color brush canvas
                         Canvas {
                             id:     coverHover
                             width:  coverSz; height: coverSz
@@ -366,7 +369,7 @@ Item {
                             onExited: decayTimer.running = true
                         }
 
-                        // Scanlines sur la cover
+                        // Scanlines on the cover
                         Item {
                             anchors.fill: parent; z: 3
                             Repeater {
@@ -379,7 +382,7 @@ Item {
                             }
                         }
 
-                        // Bordure droite
+                        // Right border
                         Rectangle {
                             anchors.right: parent.right; z: 4
                             width: 1; height: parent.height
@@ -395,42 +398,96 @@ Item {
                             anchors { fill: parent; topMargin: 7; leftMargin: 9; rightMargin: 9 }
                             spacing: 0
 
-                            // Titre
-                            Text {
-                                id:    ciTitle
-                                width: parent.width
-                                text:  root.mpTitle
-                                font.family: "Share Tech Mono"
-                                font.pixelSize: 9
-                                font.letterSpacing: 1.5
-                                color: Qt.rgba(200/255,184/255,154/255,0.9)
-                                elide: Text.ElideRight
+                            // Title
+                            // Title — scrolls like the ticker (0.5x speed) if it overflows
+                            // Title — reveals overflow by scrolling left from resting position
+                            Item {
+                                id:     ciTitleClip
+                                width:  parent.width
+                                height: ciTitle.implicitHeight
+                                clip:   true
 
-                                // Animation slide-in quand le titre change
-                                Behavior on text {
-                                    SequentialAnimation {
-                                        PropertyAnimation { target: ciTitle; property: "opacity"; to: 0; duration: 80 }
-                                        PropertyAnimation { target: ciTitle; property: "x"; to: -10; duration: 0 }
-                                        PropertyAnimation { target: ciTitle; property: "x"; to: 0; duration: 220; easing.type: Easing.OutCubic }
-                                        PropertyAnimation { target: ciTitle; property: "opacity"; to: 1; duration: 180 }
+                                Text {
+                                    id:   ciTitle
+                                    text: root.mpTitle
+                                    font.family: "Share Tech Mono"
+                                    font.pixelSize: s(12)
+                                    font.letterSpacing: 1.5
+                                    color: Qt.rgba(200/255,184/255,154/255,0.9)
+
+                                    // Slide-in animation when the title changes
+                                    Behavior on text {
+                                        SequentialAnimation {
+                                            PropertyAnimation { target: ciTitle; property: "opacity"; to: 0; duration: 80 }
+                                            PropertyAnimation { target: ciTitle; property: "x"; to: -10; duration: 0 }
+                                            PropertyAnimation { target: ciTitle; property: "x"; to: 0; duration: 220; easing.type: Easing.OutCubic }
+                                            PropertyAnimation { target: ciTitle; property: "opacity"; to: 1; duration: 180 }
+                                        }
+                                    }
+
+                                    // Marquee reveal — starts at resting position (x=0),
+                                    // scrolls left to reveal the overflow, pauses, resets
+                                    SequentialAnimation on x {
+                                        running: ciTitle.implicitWidth > ciTitleClip.width
+                                        loops:   Animation.Infinite
+
+                                        PauseAnimation { duration: 900 }
+                                        NumberAnimation {
+                                            from: 0
+                                            to:   -(ciTitle.implicitWidth - ciTitleClip.width)
+                                            duration: (ciTitle.implicitWidth - ciTitleClip.width) / (root.tickerSpeed * 0.5)
+                                            easing.type: Easing.Linear
+                                        }
+                                        PauseAnimation { duration: 900 }
+                                        NumberAnimation {
+                                            to: 0
+                                            duration: (ciTitle.implicitWidth - ciTitleClip.width) / (root.tickerSpeed * 0.5)
+                                            easing.type: Easing.Linear
+                                        }
                                     }
                                 }
                             }
 
                             Item { width: 1; height: 2 }
 
-                            // Artiste
-                            Text {
-                                id:    ciArtist
-                                width: parent.width
-                                text:  root.mpArtist
-                                font.family: "Share Tech Mono"
-                                font.pixelSize: 7
-                                font.letterSpacing: 1
-                                color: Qt.rgba(200/255,184/255,154/255,0.42)
-                                elide: Text.ElideRight
-                            }
+                            // Artist
+                            // Artist — scrolls like the ticker (0.5x speed) if it overflows
+                            // Artist — reveals overflow by scrolling left from resting position
+                            Item {
+                                id:     ciArtistClip
+                                width:  parent.width
+                                height: ciArtist.implicitHeight
+                                clip:   true
 
+                                Text {
+                                    id:   ciArtist
+                                    text: root.mpArtist
+                                    font.family: "Share Tech Mono"
+                                    font.pixelSize: s(10)
+                                    font.letterSpacing: 1
+                                    color: Qt.rgba(200/255,184/255,154/255,0.42)
+
+                                    SequentialAnimation on x {
+                                        running: ciArtist.implicitWidth > ciArtistClip.width
+                                        loops:   Animation.Infinite
+
+                                        PauseAnimation { duration: 900 }
+                                        NumberAnimation {
+                                            from: 0
+                                            to:   -(ciArtist.implicitWidth - ciArtistClip.width)
+                                            duration: (ciArtist.implicitWidth - ciArtistClip.width) / (root.tickerSpeed * 0.5)
+                                            easing.type: Easing.Linear
+                                        }
+                                        PauseAnimation { duration: 900 }
+                                        NumberAnimation {
+                                            to: 0
+                                            duration: (ciArtist.implicitWidth - ciArtistClip.width) / (root.tickerSpeed * 0.5)
+                                            easing.type: Easing.Linear
+                                        }
+                                    }
+                                }
+                            }
+                            
                             Item { width: 1; height: 4 }
 
                             // Tags
@@ -450,7 +507,7 @@ Item {
                                             anchors.centerIn: parent
                                             text: modelData
                                             font.family: "Share Tech Mono"
-                                            font.pixelSize: 6
+                                            font.pixelSize: s(9)
                                             font.letterSpacing: 1
                                             color: index < 2
                                                 ? Qt.rgba(200/255,184/255,154/255,0.6)
@@ -462,7 +519,7 @@ Item {
 
                             Item { width: 1; height: 1 }
 
-                            // Contrôles
+                            // Controls
                             Row {
                                 spacing: 4; topPadding: 5
 
@@ -473,7 +530,7 @@ Item {
                                     onClicked: root.prevTrack()
                                     Text {
                                         anchors.centerIn: parent
-                                        text: "◀"; font.pixelSize: 9
+                                        text: "◀"; font.pixelSize: s(11)
                                         color: prevBtn.textColor
                                         z: 1
                                     }
@@ -488,7 +545,7 @@ Item {
                                         anchors.centerIn: parent
                                         text: root.mpPlaying ? "PAUSE" : "PLAY"
                                         font.family: "Share Tech Mono"
-                                        font.pixelSize: 7
+                                        font.pixelSize: s(9)
                                         font.letterSpacing: 1
                                         color: playBtn.textColor
                                         z: 1
@@ -502,7 +559,7 @@ Item {
                                     onClicked: root.nextTrack()
                                     Text {
                                         anchors.centerIn: parent
-                                        text: "▶"; font.pixelSize: 9
+                                        text: "▶"; font.pixelSize: s(11)
                                         color: nextBtn.textColor
                                         z: 1
                                     }
@@ -516,29 +573,29 @@ Item {
                 Column {
                     width: pw
 
-                    // Temps
+                    // Time
                     Item {
                         width: pw;  height: s(16)
                         Text {
                             anchors { left: parent.left; verticalCenter: parent.verticalCenter; leftMargin: 0 }
                             text: root.fmtTime(root.mpPosition)
-                            font.family: "Share Tech Mono"; font.pixelSize: 7; font.letterSpacing: 1
+                            font.family: "Share Tech Mono"; font.pixelSize: s(7); font.letterSpacing: 1
                             color: Qt.rgba(200/255,184/255,154/255,0.2)
                         }
                         Text {
                             anchors { right: parent.right; verticalCenter: parent.verticalCenter; rightMargin: 0 }
                             text: root.fmtTime(root.mpLength)
-                            font.family: "Share Tech Mono"; font.pixelSize: 7; font.letterSpacing: 1
+                            font.family: "Share Tech Mono"; font.pixelSize: s(7); font.letterSpacing: 1
                             color: Qt.rgba(200/255,184/255,154/255,0.2)
                         }
                     }
 
-                    // Barre de progression
+                    // Progress bar
                     Item {
                         id:     seekBar
                         width:  pw;  height: s(14)
 
-                        // Fond
+                        // Background
                         Rectangle {
                             anchors.verticalCenter: parent.verticalCenter
                             width: parent.width; height: 2
@@ -553,7 +610,7 @@ Item {
                                     ? seekBar.width * root.mpPosition / root.mpLength
                                     : 0
                         }
-                        // Tête
+                        // Head
                         Rectangle {
                             anchors.verticalCenter: parent.verticalCenter
                             x:     root.mpLength > 0
@@ -613,7 +670,7 @@ Item {
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: root.mpPlaying ? "STREAMING" : "IDLE"
-                                font.family: "Share Tech Mono"; font.pixelSize: 6; font.letterSpacing: 1
+                                font.family: "Share Tech Mono"; font.pixelSize: s(6); font.letterSpacing: 1
                                 color: Qt.rgba(200/255,184/255,154/255,0.15)
                             }
                         }
@@ -623,7 +680,7 @@ Item {
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             text: root.clockStr
-                            font.family: "Share Tech Mono"; font.pixelSize: 6; font.letterSpacing: 1
+                            font.family: "Share Tech Mono"; font.pixelSize: s(6); font.letterSpacing: 1
                             color: Qt.rgba(200/255,184/255,154/255,0.15)
                         }
 
@@ -632,14 +689,14 @@ Item {
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             text: "LOSSLESS 48k"
-                            font.family: "Share Tech Mono"; font.pixelSize: 6; font.letterSpacing: 1
+                            font.family: "Share Tech Mono"; font.pixelSize: s(6); font.letterSpacing: 1
                             color: Qt.rgba(200/255,184/255,154/255,0.15)
                         }
                     }
                 }
             }
 
-            // CornerDeco par-dessus tout le contenu
+            // CornerDeco on top of all content
             CornerDeco {
                 width:  pw
                 height: playerCol.implicitHeight
@@ -649,34 +706,34 @@ Item {
             }
         }
 
-        // ── RIDEAU — frère du contenu dans wipeHost clipé ──
+        // ── CURTAIN — sibling of the content inside the clipped wipeHost ──
         Rectangle {
             id:    curtain
             anchors { top: parent.top; bottom: parent.bottom }
             color: "#c8b89a"
             z:     10
 
-            // État initial : caché (width=2, à droite)
+            // Initial state: hidden (width=2, on the right)
             width: 2
             x:     318
         }
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // TOGGLE : slide depuis hors-écran (droite → intérieur)
-    // Le player glisse sur son axe X — la PanelWindow garde sa taille
-    // Le wipe curtain s'anime EN MÊME TEMPS que le slide
+    // TOGGLE: slide in from off-screen (right → inside)
+    // The player slides along its X axis — the PanelWindow keeps its size
+    // The wipe curtain animates AT THE SAME TIME as the slide
     // ─────────────────────────────────────────────────────────────────
 
-    // Courbe personnalisée : lente au début, agressive vers la fin
-    // Reproduit une cubic-bezier(.4,0,.2,1) mais avec snap final
+    // Custom curve: slow at the start, aggressive toward the end
+    // Reproduces a cubic-bezier(.4,0,.2,1) but with a final snap
     NumberAnimation {
         id:       slideInAnim
         target:   wipeHost
         property: "x"
         from:     340; to: 0
         duration: 480
-        // InOutQuart = accélère + freine — on veut OutExpo (lente puis snap)
+        // InOutQuart = accelerates + brakes — we want OutExpo (slow then snap)
         easing.type:     Easing.OutExpo
     }
 
@@ -694,17 +751,17 @@ Item {
     }
 
     // ── REVEAL ──
-    // Le player slide depuis la droite, opaque dès le début.
-    // La barre sépia est le bord gauche du player — elle avance avec lui.
-    // Lecture : wipeHost.x va de 320 → 0. Le rideau est à x=0 dans wipeHost,
-    // donc il est toujours sur le bord gauche du player visible.
-    // Une fois en place, le rideau se rétracte (révèle le contenu).
+    // The player slides in from the right, opaque from the start.
+    // The sepia bar is the left edge of the player — it moves with it.
+    // Reading: wipeHost.x goes from 320 → 0. The curtain sits at x=0 inside wipeHost,
+    // so it's always on the left edge of the visible player.
+    // Once in place, the curtain retracts (revealing the content).
     SequentialAnimation {
         id: revealAnim
 
-        // Phase 1 : player + rideau (trait de 2px) entrent ensemble depuis la droite
-        // Le rideau est collé au bord gauche du player (x=0 dans wipeHost)
-        // On anime wipeHost.x : le tout glisse depuis hors-écran
+        // Phase 1: player + curtain (2px strip) enter together from the right
+        // The curtain is glued to the left edge of the player (x=0 inside wipeHost)
+        // We animate wipeHost.x: the whole thing slides in from off-screen
         ParallelAnimation {
             NumberAnimation {
                 target: wipeHost; property: "x"
@@ -712,8 +769,8 @@ Item {
                 duration: 460
                 easing.type: Easing.OutExpo
             }
-            // Le contenu est masqué pendant la phase d'entrée
-            // (le rideau pleine largeur le couvre)
+            // Content is hidden during the entry phase
+            // (the full-width curtain covers it)
             NumberAnimation {
                 target: curtain; property: "width"
                 from: 320; to: 320
@@ -721,8 +778,8 @@ Item {
             }
         }
 
-        // Phase 2 : player est en place — rideau se rétracte vers la gauche
-        // Révèle le contenu avec un snap expo
+        // Phase 2: player is in place — curtain retracts to the left
+        // Reveals the content with an expo snap
         ParallelAnimation {
             NumberAnimation {
                 target: curtain; property: "x"
@@ -754,11 +811,11 @@ Item {
     }
 
     // ── HIDE ──
-    // Rideau couvre le contenu, puis le tout sort vers la droite d'un coup
+    // Curtain covers the content, then the whole thing slides out to the right at once
     SequentialAnimation {
         id: hideAnim
 
-        // Phase 1 : rideau couvre le contenu (s'étend de gauche à droite)
+        // Phase 1: curtain covers the content (expands left to right)
         ParallelAnimation {
             NumberAnimation {
                 target: curtain; property: "x"
@@ -773,7 +830,7 @@ Item {
             }
         }
 
-        // Phase 2 : tout glisse hors-écran vers la droite avec snap expo
+        // Phase 2: everything slides off-screen to the right with an expo snap
         NumberAnimation {
             target: wipeHost; property: "x"
             from: 0; to: pw+2
@@ -793,7 +850,7 @@ Item {
         }
     }
 
-    // Animations texte à l'entrée du player
+    // Text animations when the player enters
     SequentialAnimation {
         id: titleSlideIn
         PropertyAction  { target: ciTitle;  property: "x";       value: -12 }
@@ -831,7 +888,7 @@ Item {
         }
     }
 
-    // ── API PUBLIQUE ──
+    // ── PUBLIC API ──
     function toggleVisible() {
         if (root.shown) {
             root.shown = false
@@ -844,8 +901,8 @@ Item {
         }
     }
 
-    // ── Expose toggle via IPC Quickshell ──
-    // Appelable en CLI avec :   qs ipc call player toggle
+    // ── Expose toggle via Quickshell IPC ──
+    // Callable from CLI with:   qs ipc call player toggle
     IpcHandler {
         target: "player"
         function toggle(): void { root.toggleVisible() }
@@ -863,7 +920,7 @@ Item {
         clockStr = String(d.getHours()).padStart(2,"0") + ":" + String(d.getMinutes()).padStart(2,"0")
     }
 
-    // ── COMPOSANT BOUTON CONTRÔLE (fill-slide) ──
+    // ── CONTROL BUTTON COMPONENT (fill-slide) ──
     component CBtn: Item {
         id:            btnRoot
         property bool svgIcon: false
@@ -880,7 +937,7 @@ Item {
                 ? Qt.rgba(200/255,184/255,154/255,0.3)
                 : Qt.rgba(200/255,184/255,154/255,0.1)
 
-            // Fill slide gauche→droite
+            // Fill slide left→right
             Rectangle {
                 id:    cbFill
                 anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
@@ -890,8 +947,8 @@ Item {
             }
         }
 
-        // Texte ou icône (mis via children)
-        // La couleur change via MouseArea hover
+        // Text or icon (set via children)
+        // The color changes via MouseArea hover
         property color textColor: cbMa.containsMouse
             ? "#0b0a09"
             : (isPlay

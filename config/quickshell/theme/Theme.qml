@@ -2,7 +2,7 @@ pragma Singleton
 import QtQuick
 
 QtObject {
-  // Couleurs principales
+  // Primary colors
   readonly property color bg:     "#0b0a09"
   readonly property color bg2:    "#111008"
   readonly property color bg3:    "#1a1814"
@@ -16,14 +16,14 @@ QtObject {
   readonly property color a3:     "#6090c8"
   readonly property color a4:     "#c8a860"
 
-  // Bordures
+  // Borders
   readonly property color ln:     Qt.rgba(200/255, 184/255, 154/255, 0.12)
   readonly property color lnm:    Qt.rgba(200/255, 184/255, 154/255, 0.22)
 
   // Font
   readonly property string mono:  "Share Tech Mono"
 
-  // Timings animations
+  // Animation timings
   readonly property int durationFast:   150
   readonly property int durationMid:    380
   readonly property int durationSlow:   650

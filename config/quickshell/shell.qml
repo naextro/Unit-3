@@ -18,7 +18,8 @@ ShellRoot {
 
     // ── VOLUMEBAR ──
     VolumeBar {}
-
+    // ── BRIGHTNESSBAR ──
+    BrightnessBar {}
     // ── PLAYERCTL ──
     property bool   playerVisible: false
     property bool   playerOnTop:   false
@@ -131,7 +132,7 @@ ShellRoot {
             required property var modelData;screen:modelData
             anchors.top:true;anchors.right:true
             margins.top:Math.round(modelData.height*Settings.playerPositionY);margins.right:20
-            exclusionMode:ExclusionMode.Ignore;aboveWindows:root.playerOnTop;color:"transparent"
+            exclusionMode:ExclusionMode.Ignore;aboveWindows:root.playerOnTop||playerItem.animRunning;color:"transparent"
             implicitWidth:Settings.playerWidth;implicitHeight:playerItem.implicitHeight
             Player{id:playerItem;anchors.fill:parent
                 mpTitle:root.mpTitle;mpArtist:root.mpArtist;mpCoverUrl:root.mpCoverUrl
@@ -150,6 +151,34 @@ ShellRoot {
             exclusionMode:ExclusionMode.Ignore;color:"transparent"
             implicitWidth:Settings.companionsSpriteSize+58;implicitHeight:compItem.implicitHeight
             Companions{id:compItem;anchors.fill:parent}
+            }
+        }
+
+    // ── AI PANEL ──
+    Variants {
+        model: Quickshell.screens
+        PanelWindow {
+            required property var modelData; screen: modelData
+            anchors.top: true; anchors.left: true; anchors.right: true; anchors.bottom: true
+            exclusionMode: ExclusionMode.Ignore
+            aboveWindows: aiItem.shown || aiItem.animRunning
+            color: "transparent"
+            WlrLayershell.keyboardFocus: (aiItem.shown && (!aiItem.pinned || aiItem.hovered))
+                ? WlrKeyboardFocus.Exclusive
+                : WlrKeyboardFocus.None
+            implicitWidth: modelData.width; implicitHeight: modelData.height
+
+            mask: Region {
+                x: aiItem.pinned ? aiItem.panelX : 0
+                y: aiItem.pinned ? aiItem.panelY : 0
+                width: aiItem.pinned ? aiItem.panelWidth : modelData.width
+                height: aiItem.pinned ? aiItem.panelHeight : modelData.height
+            }
+
+            AiPanel {
+                id: aiItem; anchors.fill: parent
+                screenW: modelData.width; screenH: modelData.height
+            }
         }
     }
-}
+    }

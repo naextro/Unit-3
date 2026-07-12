@@ -7,7 +7,7 @@ import Quickshell.Wayland
 ShellRoot {
     id: root
 
-    // ── État partagé ──
+    // ── Shared state ──
     property bool   revealing: false
     property bool   frozen:    false
     property bool   hiding:    false
@@ -16,14 +16,14 @@ ShellRoot {
     // ── Wallpapers ──
     property var    wallpapers:    []
     property int    currentIndex:  0
-    // Chemin générique : $HOME/Pictures/wallpapers (ou XDG_PICTURES_DIR si défini)
+    // Generic path: $HOME/Pictures/wallpapers (or XDG_PICTURES_DIR if defined)
     property string home:          Quickshell.env("HOME")
     property string xdgConfigHome: Quickshell.env("XDG_CONFIG_HOME") || (home + "/.config")
     property string xdgPictures:   Quickshell.env("XDG_PICTURES_DIR") || (home + "/Pictures")
     property string wallpaperDir:  xdgPictures + "/wallpapers"
-    property string activeMonitor: ""   // nom du monitor actif (où est la souris)
+    property string activeMonitor: ""   // name of active monitor (where the mouse is)
 
-    // ── Détecter le monitor actif ──
+    // ── Detect the active monitor ──
     Process {
         id: getMonitorProc
         command: ["sh","-c","hyprctl cursorpos -j | python3 -c \"\nimport sys,json,subprocess\npos=json.load(sys.stdin)\nmons=json.loads(subprocess.check_output(['hyprctl','monitors','-j']))\nfor m in mons:\n    x,y=m['x'],m['y']\n    w,h=m['width'],m['height']\n    if x<=pos['x']<x+w and y<=pos['y']<y+h:\n        print(m['name'])\n        break\n\""]
@@ -37,7 +37,7 @@ ShellRoot {
         }
     }
 
-    // ── Lister les wallpapers ──
+    // ── List wallpapers ──
     Process {
         id: listWallpapers
         command: ["sh","-c","ls " + root.wallpaperDir + " | grep -iE '\\.(jpg|jpeg|png|webp)$'"]
@@ -50,7 +50,7 @@ ShellRoot {
         }
     }
 
-    // ── Appliquer le wallpaper ──
+    // ── Apply wallpaper ──
     function applyWallpaper(idx, monitor) {
         if (root.wallpapers.length === 0) return
         var file = root.wallpaperDir + "/" + root.wallpapers[idx]
@@ -67,9 +67,9 @@ ShellRoot {
         running: false
     }
 
-    // ── Gestion du curseur Hyprland ──
-    // Le curseur natif Hyprland reste visible en permanence : on ne touche
-    // ni à cursor:invisible avant ni à la fermeture.
+    // ── Hyprland cursor management ──
+    // The native Hyprland cursor remains visible at all times: we do not touch
+    // cursor:invisible before or during closing.
 
     // Horloge
     property string clockFull: "--:--:--"
@@ -98,7 +98,7 @@ ShellRoot {
             property bool isPrimary: modelData.name === root.activeMonitor
             property bool isActive:  modelData.name === root.activeMonitor
 
-            // ── Vidéo reveal ──
+            // ── Reveal video ──
             MediaPlayer {
                 id: reveal
                 source: "file://" + root.xdgConfigHome + "/quickshell/videos/wave_reveal.mp4"
@@ -121,7 +121,7 @@ ShellRoot {
                 visible: !root.done
             }
 
-            // ── Vidéo hide ──
+            // ── Hide video ──
             MediaPlayer {
                 id: hide
                 source: "file://" + root.xdgConfigHome + "/quickshell/videos/wave_hide.mp4"
@@ -152,7 +152,7 @@ ShellRoot {
             }
             Rectangle { anchors.fill:parent; color:"black"; z:10; visible:root.done }
 
-            // ── UI — seulement sur l'écran actif ──
+            // ── UI — only on active screen ──
             Item {
                 anchors.fill: parent
                 visible: !root.done && isActive
@@ -161,7 +161,7 @@ ShellRoot {
                 property real uiOp: (root.frozen || root.revealing) ? 1 : 0
                 Behavior on uiOp { NumberAnimation { duration:400 } }
 
-                // Scroll souris sur toute la surface
+                // Mouse scroll on entire surface
                 MouseArea {
                     anchors.fill: parent
                     onWheel: function(e) {
@@ -169,7 +169,7 @@ ShellRoot {
                     }
                 }
 
-                // Coins déco
+                // Decorative corners
                 Item {
                     anchors{top:parent.top;left:parent.left;topMargin:28;leftMargin:30}
                     z:5; opacity:parent.uiOp
@@ -196,7 +196,7 @@ ShellRoot {
                     Text{text:"↑↓ / SCROLL  NAVIGATE  ·  ESC  QUIT";font.family:"Share Tech Mono";font.pixelSize:9;font.letterSpacing:2;color:"#463f2e"}
                 }
 
-                // ── Boutons apply — toujours visibles ──
+                // ── Apply buttons — always visible ──
                 Item {
                     id: applyPanel
                     anchors.bottom: parent.bottom
@@ -232,7 +232,7 @@ ShellRoot {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 spacing: 12
 
-                                // Bouton écran actif
+                                // Active screen button
                                 Item { width:162; height:42
                                     Rectangle { anchors.fill:parent;color:"transparent";border.color:"#463f2e";border.width:1 }
                                     Rectangle { id:fill1;anchors.left:parent.left;anchors.top:parent.top;anchors.bottom:parent.bottom;color:"#463f2e";width:0
@@ -247,7 +247,7 @@ ShellRoot {
                                         onClicked:{ root.applyWallpaper(root.currentIndex, root.activeMonitor); root.doClose() } }
                                 }
 
-                                // Bouton les deux écrans
+                                // Both screens button
                                 Item { width:162; height:42
                                     Rectangle { anchors.fill:parent;color:"transparent";border.color:"#463f2e";border.width:1 }
                                     Rectangle { id:fill2;anchors.left:parent.left;anchors.top:parent.top;anchors.bottom:parent.bottom;color:"#463f2e";width:0
@@ -266,8 +266,8 @@ ShellRoot {
                     }
                 }
 
-                // ── Carrousel ──
-                // ── Carrousel ──
+                // ── Carousel ──
+                // ── Carousel ──
                 Item {
                     id: carousel
                     anchors.top: parent.top
@@ -289,32 +289,32 @@ ShellRoot {
                     Keys.onSpacePressed:  { root.applyWallpaper(root.currentIndex, "both"); root.doClose() }
                     readonly property int n: root.wallpapers.length
 
-                    // Dimensions de base (taille de la vignette centrale à pleine échelle)
+                    // Base dimensions (size of the central thumbnail at full scale)
                     readonly property int baseW: 800
                     readonly property int baseH: 500
-                    // Ligne de base commune : toutes les vignettes ont leur bas aligné ici
+                    // Common baseline: all thumbnails have their bottom aligned here
                     readonly property int baselineY: height / 2 + baseH / 2
 
-                    // Échelles par distance (slot) au centre
+                    // Scales by distance (slot) to center
                     readonly property real scaleCenter: 1.0
                     readonly property real scaleNear:   0.54   // ~280/520
                     readonly property real scaleFar:    0.35   // ~180/520
 
-                    // Espacements X (demi-axes entre centres de vignettes) par slot
+                    // X spacings (half-axes between centers of thumbnails) by slot
                     readonly property int offsetNear: 280
                     readonly property int offsetFar:  576
 
-                    // Une vignette par wallpaper. Chaque vignette choisit sa place
-                    // en fonction de l'offset signé vers currentIndex (chemin le plus
-                    // court sur la boucle). Position, scale et opacity sont animées
-                    // -> le zoom est smooth et part du bas (transformOrigin: Bottom).
+                    // One thumbnail per wallpaper. Each thumbnail chooses its place
+                    // based on the signed offset to currentIndex (the shortest
+                    // path on the loop). Position, scale and opacity are animated
+                    // -> zoom is smooth and starts from the bottom (transformOrigin: Bottom).
                     Repeater {
                         model: root.wallpapers
 
                         Item {
                             id: thumb
                             property int wIdx: index
-                            // Offset signé (-n/2 .. n/2) = chemin le plus court vers currentIndex
+                            // Signed offset (-n/2 .. n/2) = shortest path to currentIndex
                             property int rawDelta: carousel.n > 0 ? (wIdx - root.currentIndex) : 0
                             property int delta: {
                                 if (carousel.n === 0) return 0
@@ -326,7 +326,7 @@ ShellRoot {
                             }
                             property int absDelta: Math.abs(delta)
 
-                            // Position X et échelle dérivées du slot
+                            // X position and scale derived from slot
                             property real targetScale:
                                   absDelta === 0 ? carousel.scaleCenter
                                 : absDelta === 1 ? carousel.scaleNear
@@ -351,7 +351,7 @@ ShellRoot {
                             visible: absDelta <= 2
                             transformOrigin: Item.Bottom
 
-                            // Animations fluides — le scale part du bas grâce au transformOrigin
+                            // Smooth animations — scale starts from bottom thanks to transformOrigin
                             Behavior on x       { NumberAnimation { duration:320; easing.type:Easing.OutCubic } }
                             Behavior on scale   { NumberAnimation { duration:320; easing.type:Easing.OutCubic } }
                             Behavior on opacity { NumberAnimation { duration:320; easing.type:Easing.OutCubic } }
@@ -372,7 +372,7 @@ ShellRoot {
                                     smooth: true
                                 }
 
-                                // Bandeau avec le nom, visible seulement sur la vignette centrale
+                                // Banner with the name, visible only on the central thumbnail
                                 Rectangle {
                                     anchors.bottom: parent.bottom
                                     width: parent.width
@@ -392,7 +392,7 @@ ShellRoot {
 
                             MouseArea {
                                 anchors.fill: parent
-                                // Clic sur une voisine -> on navigue vers elle
+                                // Click on a neighbor -> navigate to it
                                 onClicked: if (thumb.delta !== 0) root.navigate(thumb.delta)
                                 onWheel: function(e) { root.navigate(e.angleDelta.y < 0 ? 1 : -1) }
                             }
@@ -401,7 +401,7 @@ ShellRoot {
                 }
             }
 
-            // ── Connexions état ──
+            // ── State connections ──
             Connections {
                 target: root
                 function onRevealingChanged() {

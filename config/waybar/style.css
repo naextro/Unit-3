@@ -50,6 +50,7 @@ window#waybar {
 #cpu,
 #memory,
 #network,
+#backlight,
 #pulseaudio,
 #clock,
 #custom-pomodoro,
@@ -94,4 +95,14 @@ window#waybar {
 #custom-power:hover {
   color: #c87060;
   background: rgba(200, 96, 96, 0.08);
+}
+
+#backlight {
+  padding: 0 10px;
+  color: #c8a860;
+  border-left: 1px solid rgba(200, 184, 154, 0.08);
+  letter-spacing: 1px;
+}
+#tray {
+  color: #c8b89a;
 }

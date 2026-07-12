@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-qshare — partage de fichiers PC <-> téléphone via HTTP + QR code
+qshare — PC <-> phone file sharing via HTTP + QR code
 
-Usage CLI :
+CLI Usage:
     qshare send <fichier|dossier...> [--tunnel] [-k] [-o IGNORED]
     qshare recv [-o DIR] [--tunnel] [-k]
 
-Usage interne (depuis Quickshell) :
+Internal usage (from Quickshell):
     qshare ... --qr-out /tmp/qshare-qr.png --event-file /tmp/qshare-events
 """
 from __future__ import annotations
@@ -41,7 +41,7 @@ ANSI_RESET = "\033[0m"
 ANSI_BOLD = "\033[1m"
 
 
-# ─── Réseau ───────────────────────────────────────────────────────────────────
+# ─── Network ───────────────────────────────────────────────────────────────────
 def get_local_ip(iface: str | None = None) -> str:
     if iface:
         try:
@@ -123,7 +123,7 @@ def print_qr(url: str) -> None:
 
 
 def write_qr_png(url: str, path: Path) -> None:
-    """Écrit un PNG du QR avec la palette NieR (fond sombre, modules clairs)."""
+    """Writes a PNG of the QR with the NieR palette (dark background, light modules)."""
     qr = qrcode.QRCode(
         border=2,
         box_size=12,
@@ -140,7 +140,7 @@ def write_qr_png(url: str, path: Path) -> None:
     img.save(path)
 
 
-# ─── Event file (IPC vers Quickshell) ─────────────────────────────────────────
+# ─── Event file (IPC to Quickshell) ─────────────────────────────────────────
 class EventLog:
     def __init__(self, path: str | None):
         self.path = Path(path) if path else None
@@ -157,7 +157,7 @@ class EventLog:
                 f.write(line.rstrip("\n") + "\n")
 
 
-# ─── Préparation du payload pour SEND ─────────────────────────────────────────
+# ─── Preparing the payload for SEND ─────────────────────────────────────────
 def build_payload(paths: list[Path]) -> tuple[Path, str, bool]:
     for p in paths:
         if not p.exists():
@@ -190,7 +190,7 @@ def build_payload(paths: list[Path]) -> tuple[Path, str, bool]:
     return zip_path, archive_name, True
 
 
-# ─── Page HTML d'upload (style NieR) ──────────────────────────────────────────
+# ─── HTML upload page (NieR style) ──────────────────────────────────────────
 UPLOAD_HTML = """<!doctype html>
 <html lang="fr"><head>
 <meta charset="utf-8">
@@ -267,7 +267,7 @@ btn.addEventListener("click", () => {{
 """
 
 
-# ─── Handlers HTTP ────────────────────────────────────────────────────────────
+# ─── HTTP Handlers ────────────────────────────────────────────────────────────
 class SendHandler(BaseHTTPRequestHandler):
     file_path: Path = None  # type: ignore[assignment]
     file_name: str = ""
@@ -417,7 +417,7 @@ def _unique_path(p: Path) -> Path:
         i += 1
 
 
-# ─── Commandes ────────────────────────────────────────────────────────────────
+# ─── Commands ────────────────────────────────────────────────────────────────
 def _start_server_with_port(handler_cls, preferred_port: int):
     port = preferred_port if preferred_port else _free_port()
     try:

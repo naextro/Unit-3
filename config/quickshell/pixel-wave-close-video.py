@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-Pixel Wave Video Generator — PHASE DE FERMETURE (hide)
+Pixel Wave Video Generator — HIDE PHASE
 ═══════════════════════════════════════════════════════════════
 
-Génère une vidéo MP4 de la phase de disparition de la vague :
-au départ tous les pixels sépia sont visibles (écran rempli),
-puis ils s'effacent progressivement en vague depuis le centre.
+Generates an MP4 video of the disappearing phase of the wave:
+initially all sepia pixels are visible (filled screen),
+then they fade out progressively in a wave from the center.
 
-Usage :
+Usage:
     python pixel_wave_close.py
     python pixel_wave_close.py -w 2560 -H 1440
     python pixel_wave_close.py -d 1.8 -o wave_out.mp4
 
-Dépendances (Arch) :
+Dependencies (Arch):
     sudo pacman -S python-pillow python-numpy ffmpeg
 ═══════════════════════════════════════════════════════════════
 """
@@ -41,7 +41,7 @@ if not shutil.which("ffmpeg"):
 
 
 # ═══════════════════════════════════════════════════════════════
-# PARAMÈTRES (identiques au lockscreen HTML)
+# PARAMETERS (identical to the HTML lockscreen)
 # ═══════════════════════════════════════════════════════════════
 CELL = 7
 STEP = 8
@@ -51,15 +51,15 @@ SPRING_K = 0.28
 SPRING_D = 0.62
 WAVE_SPEED = 7.2
 
-BG_R, BG_G, BG_B = 11, 9, 6           # fond sombre #0b0906
+BG_R, BG_G, BG_B = 11, 9, 6           # dark background #0b0906
 SEPIA_R, SEPIA_G, SEPIA_B = 230, 215, 180
 
 
 # ═══════════════════════════════════════════════════════════════
-# DOSSIER DE SORTIE PAR DÉFAUT
+# DEFAULT OUTPUT DIRECTORY
 # ═══════════════════════════════════════════════════════════════
 def default_output() -> Path:
-    """~/.config/quickshell/videos/wave_close.mp4 (respecte XDG_CONFIG_HOME)."""
+    """~/.config/quickshell/videos/wave_close.mp4 (respects XDG_CONFIG_HOME)."""
     xdg = os.environ.get("XDG_CONFIG_HOME")
     base = Path(xdg) if xdg else Path.home() / ".config"
     return base / "quickshell" / "videos" / "wave_close.mp4"
@@ -75,7 +75,7 @@ def build_grid(width: int, height: int):
     off_y = (height - rows * STEP) // 2
     n = cols * rows
 
-    rng = random.Random(42)  # même seed que pour reveal → cohérence visuelle
+    rng = random.Random(42)  # same seed as reveal → visual consistency
 
     target_color = np.array(
         [0.78 + rng.random() * 0.14 for _ in range(n)], dtype=np.float32
@@ -84,7 +84,7 @@ def build_grid(width: int, height: int):
         [(rng.random() - 0.5) * 4.0 for _ in range(n)], dtype=np.float32
     )
 
-    # IMPORTANT : démarrage plein (tous les pixels visibles)
+    # IMPORTANT: full start (all pixels visible)
     progress = np.ones(n, dtype=np.float32)
     lift = np.zeros(n, dtype=np.float32)
     lift_vel = np.zeros(n, dtype=np.float32)
@@ -116,7 +116,7 @@ def step_simulation(state, waves, speed_scale: float):
     lift_vel = state["lift_vel"]
     jitter = state["jitter"]
 
-    # 1. Ressort d'amortissement pour le lift
+    # 1. Damping spring for the lift
     lift_vel *= SPRING_D
     lift_vel -= SPRING_K * lift * SPRING_D
     lift += lift_vel
@@ -124,7 +124,7 @@ def step_simulation(state, waves, speed_scale: float):
     lift[mask] = 0
     lift_vel[mask] = 0
 
-    # Coordonnées cellulaires
+    # Cellular coordinates
     c_idx = np.arange(n) % cols
     r_idx = np.arange(n) // cols
 
@@ -147,14 +147,14 @@ def step_simulation(state, waves, speed_scale: float):
         ease = t * t * (3.0 - 2.0 * t)
 
         if w["dir"] == 1:
-            # REVEAL : progress prend la valeur max atteinte
+            # REVEAL: progress takes the max value reached
             np.maximum(progress, ease * active, out=progress)
         else:
-            # HIDE : progress prend la valeur min (1 - ease)
+            # HIDE: progress takes the min value (1 - ease)
             inv = 1.0 - ease
             np.minimum(progress, np.where(active, inv, progress), out=progress)
 
-        # Soulèvement (lift) au passage précis du front
+        # Lift at the precise front passage
         in_front = (df >= -FRONT_W) & (df < FRONT_W)
         can_lift = lift < 0.1
         if w["dir"] == 1:
@@ -168,7 +168,7 @@ def step_simulation(state, waves, speed_scale: float):
 
 
 # ═══════════════════════════════════════════════════════════════
-# RENDU
+# RENDERING
 # ═══════════════════════════════════════════════════════════════
 def render_frame(state, width: int, height: int) -> np.ndarray:
     img = np.full((height, width, 3), (BG_R, BG_G, BG_B), dtype=np.uint8)
@@ -183,7 +183,7 @@ def render_frame(state, width: int, height: int) -> np.ndarray:
 
     v = np.minimum(1.0, progress * target_color)
 
-    # Deux passes : pixels posés puis pixels soulevés (ordre z-index)
+    # Two passes: flat pixels then lifted pixels (z-index order)
     for pass_idx in range(2):
         for r in range(rows):
             for c in range(cols):
@@ -219,7 +219,7 @@ def render_frame(state, width: int, height: int) -> np.ndarray:
 
 
 # ═══════════════════════════════════════════════════════════════
-# PIPELINE VIDÉO
+# VIDEO PIPELINE
 # ═══════════════════════════════════════════════════════════════
 def generate_video(
     width: int,
@@ -230,7 +230,7 @@ def generate_video(
     quality: str = "high",
     hold_frames: int = 0,
 ):
-    # Crée le dossier de sortie s'il n'existe pas
+    # Create output directory if it does not exist
     output.parent.mkdir(parents=True, exist_ok=True)
 
     print(f"▸ Mode       : FERMETURE (hide)")
@@ -295,7 +295,7 @@ def generate_video(
     try:
         last_pct = -1
 
-        # Optionnel : quelques frames "plein" avant de déclencher la vague
+        # Optional: a few "full" frames before triggering the wave
         for _ in range(hold_frames):
             frame = render_frame(state, width, height)
             proc.stdin.write(frame.tobytes())
@@ -339,12 +339,12 @@ def main():
         description="Génère une vidéo de la vague de pixels NieR (phase HIDE).",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Exemples :
+Examples:
   %(prog)s                            # 1920x1080 60fps 1.8s → ~/.config/quickshell/videos/wave_close.mp4
-  %(prog)s -w 2560 -H 1440            # résolution 1440p
-  %(prog)s -d 2.2 --fps 60            # durée 2.2s
-  %(prog)s --hold 20                  # 20 frames de plein écran avant la vague
-  %(prog)s -q medium -o logout.mp4    # qualité medium
+  %(prog)s -w 2560 -H 1440            # 1440p resolution
+  %(prog)s -d 2.2 --fps 60            # 2.2s duration
+  %(prog)s --hold 20                  # 20 frames of full screen before the wave
+  %(prog)s -q medium -o logout.mp4    # medium quality
         """,
     )
     p.add_argument("-w", "--width", type=int, default=1920, help="largeur (px)")

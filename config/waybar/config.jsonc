@@ -11,14 +11,41 @@
     "custom/ticker"
   ],
   "modules-right": [
-    "custom/pomodoro",
-    "cpu",
-    "memory",
-    "network",
-    "pulseaudio",
-    "clock",
-    "custom/power"
-  ],
+  "group/traygroup",
+  "custom/pomodoro",
+  "cpu",
+  "memory",
+  "network",
+  "backlight",
+  "pulseaudio",
+  "clock",
+  "custom/power"
+],
+
+"backlight": {
+  "format": "BRI {percent}%",
+  "on-scroll-up": "brightnessctl set 5%+",
+  "on-scroll-down": "brightnessctl set 5%-",
+  "interval": 2
+},
+
+"group/traygroup": {
+  "orientation": "horizontal",
+  "drawer": {
+    "transition-duration": 300,
+    "children-class": "tray-item",
+    "transition-left-to-right": true
+  },
+  "modules": [
+    "custom/tray-toggle",
+    "tray"
+  ]
+},
+
+"custom/tray-toggle": {
+  "format": "▸",
+  "tooltip": false
+},
 
   "hyprland/workspaces": {
     "format": "{id}",
@@ -32,19 +59,20 @@
 
   "cpu": {
     "format": "CPU {usage}%",
-    "interval": 3
+    "interval": 3,
+    "on-click": "kitty -e htop"
   },
-
   "memory": {
     "format": "MEM {percentage}%",
-    "interval": 3
+    "interval": 3,
+    "on-click": "kitty -e htop"
   },
-
   "network": {
     "format-wifi": "NET {essid}",
     "format-ethernet": "ETH {ifname}",
     "format-disconnected": "NET --",
-    "tooltip-format": "{ipaddr}"
+    "tooltip-format": "{ipaddr}",
+    "on-click": "kitty -e nmtui"
   },
 
   "pulseaudio": {
@@ -54,23 +82,17 @@
   },
 
   "clock": {
-    "format": "{:%H:%M}",
+    "format": "{:%I:%M %p}",
     "format-alt": "{:%Y/%m/%d}",
     "tooltip-format": "{:%A %d %B %Y}"
   },
 
   "custom/ticker": {
-    "exec": "echo '接続中 // SCANNING // データ処理 // SYS:ACTIVE // NR-2B@ARCH // 全システム正常 // 起動完了 //'",
+    "exec": "echo 'FREE PALESTINE // GLORY TO MANKIND'",
     "interval": 60,
     "format": "{}"
   },
 
-  "custom/pomodoro": {
-    "exec": "~/.config/waybar/scripts/pomodoro.sh",
-    "interval": 1,
-    "format": "{}",
-    "on-click": "~/.config/waybar/scripts/pomodoro_toggle.sh"
-  },
 
   "custom/power": {
     "format": "⏻",

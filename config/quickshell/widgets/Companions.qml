@@ -83,11 +83,11 @@ Item {
     readonly property int reactCooldownMs: 4000
     readonly property int spriteSize:      Settings.companionsSpriteSize
 
-    // Largeur fixe = flèches (26) + sprite (128) + flèches (26) + spacing (6)
+    // Fixed width = arrows (26) + sprite (128) + arrows (26) + spacing (6)
     implicitWidth:  26 + 128 + 26 + 6
     implicitHeight: outerCol.implicitHeight
 
-    // Tout dans une colonne simple, de haut en bas
+    // Everything in a simple column, from top to bottom
     Column {
         id:      outerCol
         width:   root.implicitWidth
@@ -95,7 +95,7 @@ Item {
         anchors.right:  parent.right
         spacing: 4
 
-        // ── BULLE ── hauteur fixe, clip interne
+        // ── BUBBLE ── fixed height, internal clip
         Rectangle {
             id:      bubble
             width:   parent.width
@@ -132,12 +132,12 @@ Item {
             }
         }
 
-        // ── CARROUSEL ──
+        // ── CAROUSEL ──
         Row {
             width:   parent.width
             spacing: 3
 
-            // Flèche gauche
+            // Left arrow
             Rectangle {
                 width: 26; height: 38; color: "transparent"
                 border.color: Qt.rgba(200/255,184/255,154/255,0.15); border.width: 1
@@ -228,7 +228,7 @@ Item {
                 }
             }
 
-            // Flèche droite
+            // Right arrow
             Rectangle {
                 width: 26; height: 38; color: "transparent"
                 border.color: Qt.rgba(200/255,184/255,154/255,0.15); border.width: 1
@@ -240,7 +240,7 @@ Item {
             }
         }
 
-        // ── NOM ──
+        // ── NAME ──
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text:  root.companions[root.currentIdx].name
@@ -265,7 +265,7 @@ Item {
             }
         }
 
-        // ── BARRE SPAM ──
+        // ── SPAM BAR ──
         Row {
             anchors.horizontalCenter: parent.horizontalCenter
             spacing: 2
