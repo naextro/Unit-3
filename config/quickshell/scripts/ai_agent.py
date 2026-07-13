@@ -92,13 +92,31 @@ def call_openai_compatible(url, api_key, model, messages):
         data=body.encode('utf-8'),
         headers={
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}"
+            "Authorization": f"Bearer {api_key}",
+            "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
         }
     )
-    with urllib.request.urlopen(req, timeout=120) as response:
-        res = json.loads(response.read().decode('utf-8'))
-        return res["choices"][0]["message"]["content"]
-
+    try:
+        with urllib.request.urlopen(req, timeout=120) as response:
+            res = json.loads(response.read().decode('utf-8'))
+            return res["choices"][0]["message"]["content"]
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode('utf-8', errors='replace')
+        try:
+            err_json = json.loads(error_body)
+            err_obj = err_json.get("error", {})
+            if err_obj.get("code") == "tool_use_failed" and "failed_generation" in err_obj:
+                # Model tried native tool calling instead of our XML format.
+                # Convert its intended call into our expected <tool_call> tag.
+                gen = json.loads(err_obj["failed_generation"])
+                tool_name = gen.get("name", "")
+                tool_args = gen.get("arguments", {})
+                arg_name = "query" if "query" in tool_args else "cmd"
+                arg_val = tool_args.get(arg_name, "")
+                return f'<tool_call name="{tool_name}" {arg_name}="{arg_val}" />'
+        except Exception:
+            pass
+        raise
 def call_gemini(api_key, model, messages, system_prompt):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     contents = []
@@ -169,11 +187,17 @@ def main():
                 content = call_openai_compatible("https://api.groq.com/openai/v1/chat/completions", args.api_key, args.model, messages)
             elif args.provider == "openrouter":
                 content = call_openai_compatible("https://openrouter.ai/api/v1/chat/completions", args.api_key, args.model, messages)
+            elif args.provider == "cerebras":
+                content = call_openai_compatible("https://api.cerebras.ai/v1/chat/completions", args.api_key, args.model, messages)
             elif args.provider == "gemini":
                 content = call_gemini(args.api_key, args.model, messages, system_prompt)
             else:
                 print(f"Error: Unknown provider {args.provider}")
                 sys.exit(1)
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode('utf-8', errors='replace')
+            print(f"Connection failed: HTTP {e.code}: {error_body}")
+            sys.exit(1)
         except Exception as e:
             print(f"Connection failed: {e}")
             sys.exit(1)

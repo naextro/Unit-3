@@ -50,7 +50,7 @@ QtObject {
 
     // ── COMPANIONS ──────────────────────────────────────────────
 
-    readonly property bool companionsEnabled: false  // Show companions
+    readonly property bool companionsEnabled: true  // Show companions
 
     // Distance from the right edge in pixels
     readonly property int companionsMarginRight: s(20)
@@ -102,11 +102,15 @@ QtObject {
 
     // Groq — cloud, requires API key
     readonly property string groqApiKey: ""
-    readonly property string groqModel:  "llama-3.3-70b-versatile"
+    readonly property string groqModel:  "openai/gpt-oss-20b"
 
     // OpenRouter — cloud, DEFAULT provider
     readonly property string openrouterApiKey: ""
     readonly property string openrouterModel:  "openrouter/free"
+    
+    // Cereberas cz why not
+    readonly property string cerebrasApiKey: ""
+    readonly property string cerebrasModel:  "gpt-oss-120b"
 
     // Gemini — cloud, requires API key
     readonly property string geminiApiKey: ""
@@ -118,6 +122,7 @@ QtObject {
         if (aiProvider === "groq")        return groqModel
         if (aiProvider === "openrouter")  return openrouterModel
         if (aiProvider === "gemini")      return geminiModel
+        if (aiProvider === "cerebras")    return cerebrasModel
         return "unknown"
     }
 

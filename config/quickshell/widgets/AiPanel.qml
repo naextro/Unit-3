@@ -1128,6 +1128,7 @@ Item {
     if (provider === "groq") apiKey = Settings.groqApiKey
     else if (provider === "openrouter") apiKey = Settings.openrouterApiKey
     else if (provider === "gemini") apiKey = Settings.geminiApiKey
+    else if (provider === "cerebras") apiKey = Settings.cerebrasApiKey
 
     var endpoint = Settings.ollamaEndpoint
     var systemPrompt = Settings.aiSystemPrompt
