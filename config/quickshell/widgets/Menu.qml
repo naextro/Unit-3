@@ -48,13 +48,29 @@ Item {
     }
 
     readonly property var filteredApps: {
-        var q = searchQuery.toLowerCase().trim()
-        return apps.filter(function(a) {
-            var catOk = currentCat === "all" || a.cat === currentCat
-            var qOk = !q || a.name.toLowerCase().indexOf(q) >= 0 || a.meta.toLowerCase().indexOf(q) >= 0
-            return catOk && qOk
-        })
+    var q = searchQuery.toLowerCase().trim()
+    var matches = apps.filter(function(a) {
+        var catOk = currentCat === "all" || a.cat === currentCat
+        var qOk = !q || a.name.toLowerCase().indexOf(q) >= 0 || a.meta.toLowerCase().indexOf(q) >= 0
+        return catOk && qOk
+    })
+
+    if (!q) return matches
+
+    function score(a) {
+        var n = a.name.toLowerCase()
+        if (n === q) return 0
+        if (n.indexOf(q) === 0) return 1
+        if (n.indexOf(q) >= 0) return 2
+        return 3
     }
+
+    return matches.slice().sort(function(a, b) {
+        var sa = score(a), sb = score(b)
+        if (sa !== sb) return sa - sb
+        return a.name.localeCompare(b.name)
+    })
+}
 
     // ── Read .desktop ──
     Process {
