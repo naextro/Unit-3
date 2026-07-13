@@ -27,7 +27,7 @@ Item {
     // ── State ──
     property bool   shown: false
     property string clockStr: "--:--"
-    property bool   pinned: false
+    property bool   pinned: true
     readonly property bool animRunning: hideAnim.running || revealAnim.running
     readonly property int panelRestX: Settings.aiPanelMarginLeft  // x when panel is fully visible
 
@@ -42,6 +42,94 @@ Item {
     property var    messages: []      // [{role:"user"|"assistant"|"error", content:"..."}]
     property bool   loading:  false
     property string inputText: ""
+    property bool allowRoot: false
+
+    // ── Display messages — splits assistant code blocks into separate visual segments ──
+    property var displayMessages: {
+        var result = []
+        for (var i = 0; i < root.messages.length; i++) {
+            var parts = root.splitMessageForDisplay(root.messages[i])
+            for (var j = 0; j < parts.length; j++) {
+                result.push(parts[j])
+            }
+        }
+        return result
+    }
+
+    function splitMessageForDisplay(msg) {
+        if (msg.role !== "assistant") return [msg]
+
+        var result = []
+        var text = msg.content
+        var i = 0
+        var current = ""
+
+        while (i < text.length) {
+            // Check for triple backtick (fenced code block)
+            if (text.substring(i, i + 3) === "```") {
+                var closeIdx3 = text.indexOf("```", i + 3)
+                if (closeIdx3 !== -1) {
+                    if (current.trim() !== "") {
+                        result.push({role: "assistant", content: current.trim(), isCode: false})
+                    }
+                    current = ""
+                    var codeContent3 = text.substring(i + 3, closeIdx3)
+                    var langTag = ""
+                    var firstNewline = codeContent3.indexOf("\n")
+                    if (firstNewline !== -1) {
+                        var possibleLang = codeContent3.substring(0, firstNewline).trim()
+                        if (possibleLang.length <= 20 && possibleLang.indexOf(" ") === -1) {
+                            langTag = possibleLang
+                            codeContent3 = codeContent3.substring(firstNewline + 1)
+                        }
+                    }
+                    if (codeContent3.trim() !== "") {
+                        result.push({role: "assistant", content: codeContent3, isCode: true, lang: langTag})
+                    }
+                    i = closeIdx3 + 3
+                    continue
+                }
+            }
+            // Check for double backtick
+            if (text.substring(i, i + 2) === "``") {
+                var closeIdx2 = text.indexOf("``", i + 2)
+                if (closeIdx2 !== -1) {
+                    if (current.trim() !== "") {
+                        result.push({role: "assistant", content: current.trim(), isCode: false})
+                    }
+                    current = ""
+                    var codeContent2 = text.substring(i + 2, closeIdx2)
+                    if (codeContent2.trim() !== "") {
+                        result.push({role: "assistant", content: codeContent2.trim(), isCode: true, lang: ""})
+                    }
+                    i = closeIdx2 + 2
+                    continue
+                }
+            }
+            // Check for single backtick
+            if (text[i] === '`') {
+                var closeIdx1 = text.indexOf("`", i + 1)
+                if (closeIdx1 !== -1) {
+                    if (current.trim() !== "") {
+                        result.push({role: "assistant", content: current.trim(), isCode: false})
+                    }
+                    current = ""
+                    var codeContent1 = text.substring(i + 1, closeIdx1)
+                    if (codeContent1.trim() !== "") {
+                        result.push({role: "assistant", content: codeContent1.trim(), isCode: true, lang: ""})
+                    }
+                    i = closeIdx1 + 1
+                    continue
+                }
+            }
+            current += text[i]
+            i++
+        }
+        if (current.trim() !== "") {
+            result.push({role: "assistant", content: current.trim(), isCode: false})
+        }
+        return result.length > 0 ? result : [msg]
+    }
 
     // ── Click-outside-to-close overlay (same pattern as Menu.qml) ──
     // Full-screen transparent MouseArea behind the panel; clicking it
@@ -140,6 +228,124 @@ Item {
                     Row {
                         anchors { right: parent.right; verticalCenter: parent.verticalCenter; rightMargin: s(10) }
                         spacing: s(8)
+
+                        // Warn button
+                        Item {
+                            id: warnBtn
+                            width: s(28)
+                            height: s(14)
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            Rectangle {
+                                anchors.fill: parent
+                                color: root.allowRoot 
+                                    ? Qt.rgba(200/255, 112/255, 96/255, 0.15)
+                                    : (warnMa.containsMouse ? Qt.rgba(200/255, 184/255, 154/255, 0.04) : "transparent")
+                                border.width: 1
+                                border.color: root.allowRoot
+                                    ? Qt.rgba(200/255, 112/255, 96/255, 0.6)
+                                    : (warnMa.containsMouse ? Qt.rgba(200/255, 184/255, 154/255, 0.4) : Qt.rgba(200/255, 184/255, 154/255, 0.12))
+
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                                Behavior on border.color { ColorAnimation { duration: 150 } }
+                            }
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "WARN"
+                                font.family: "Share Tech Mono"
+                                font.pixelSize: s(7)
+                                font.letterSpacing: 1
+                                color: root.allowRoot
+                                    ? Qt.rgba(200/255, 112/255, 96/255, 0.95)
+                                    : (warnMa.containsMouse ? Qt.rgba(200/255, 184/255, 154/255, 0.6) : Qt.rgba(200/255, 184/255, 154/255, 0.25))
+
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                            }
+
+                            MouseArea {
+                                id: warnMa
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                onClicked: root.allowRoot = !root.allowRoot
+                            }
+                        }
+
+                        // Export button
+                        Item {
+                            id: exportBtn
+                            width: s(34)
+                            height: s(14)
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            Rectangle {
+                                anchors.fill: parent
+                                color: exportMa.containsMouse ? Qt.rgba(200/255, 184/255, 154/255, 0.04) : "transparent"
+                                border.width: 1
+                                border.color: exportMa.containsMouse
+                                    ? Qt.rgba(200/255, 184/255, 154/255, 0.4)
+                                    : Qt.rgba(200/255, 184/255, 154/255, 0.12)
+
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                                Behavior on border.color { ColorAnimation { duration: 150 } }
+                            }
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "EXPORT"
+                                font.family: "Share Tech Mono"
+                                font.pixelSize: s(7)
+                                font.letterSpacing: 1
+                                color: exportMa.containsMouse ? Qt.rgba(200/255, 184/255, 154/255, 0.6) : Qt.rgba(200/255, 184/255, 154/255, 0.25)
+
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                            }
+
+                            MouseArea {
+                                id: exportMa
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                onClicked: root.exportChat()
+                            }
+                        }
+
+                        // Clear button
+                        Item {
+                            id: clearBtn
+                            width: s(30)
+                            height: s(14)
+                            anchors.verticalCenter: parent.verticalCenter
+
+                            Rectangle {
+                                anchors.fill: parent
+                                color: clearMa.containsMouse ? Qt.rgba(200/255, 184/255, 154/255, 0.04) : "transparent"
+                                border.width: 1
+                                border.color: clearMa.containsMouse
+                                    ? Qt.rgba(200/255, 184/255, 154/255, 0.4)
+                                    : Qt.rgba(200/255, 184/255, 154/255, 0.12)
+
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                                Behavior on border.color { ColorAnimation { duration: 150 } }
+                            }
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: "CLEAR"
+                                font.family: "Share Tech Mono"
+                                font.pixelSize: s(7)
+                                font.letterSpacing: 1
+                                color: clearMa.containsMouse ? Qt.rgba(200/255, 184/255, 154/255, 0.6) : Qt.rgba(200/255, 184/255, 154/255, 0.25)
+
+                                Behavior on color { ColorAnimation { duration: 150 } }
+                            }
+
+                            MouseArea {
+                                id: clearMa
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                onClicked: root.clearChat()
+                            }
+                        }
 
                         // Pin button
                         Item {
@@ -256,39 +462,54 @@ Item {
 
                             // Message bubbles
                             Repeater {
-                                model: root.messages.length
+                                model: root.displayMessages.length
                                 delegate: Item {
                                     id: msgDelegate
                                     required property int index
                                     width: msgCol.width
                                     height: msgBubble.implicitHeight + s(6)
 
-                                     property var msg: root.messages[index]
+                                     property var msg: root.displayMessages[index]
                                      property bool isUser: msg.role === "user"
                                      property bool isError: msg.role === "error"
+                                     property bool isCode: msg.isCode === true
 
                                      readonly property int bubblePaddingH: isUser ? s(9) : s(11)
                                      readonly property int bubblePaddingB: isUser ? s(8) : s(10)
                                      readonly property int labelTopMargin: s(4)
                                      readonly property int textTopMargin: s(3)
 
+                                    HoverHandler {
+                                        id: msgHover
+                                    }
+
                                     Rectangle {
                                         id: msgBubble
-                                        width: Math.min(msgText.implicitWidth + (msgDelegate.bubblePaddingH * 2), parent.width * 0.88)
+                                        width: Math.min(
+                                            Math.max(
+                                                msgText.implicitWidth + (msgDelegate.bubblePaddingH * 2),
+                                                roleLabel.implicitWidth + (msgDelegate.bubblePaddingH * 2)
+                                            ),
+                                            parent.width * 0.88
+                                        )
                                         implicitHeight: msgDelegate.labelTopMargin + roleLabel.implicitHeight + msgDelegate.textTopMargin + msgText.implicitHeight + msgDelegate.bubblePaddingB
                                         anchors.right: msgDelegate.isUser ? parent.right : undefined
                                         anchors.left:  msgDelegate.isUser ? undefined : parent.left
                                         color: msgDelegate.isError
                                             ? Qt.rgba(200/255, 112/255, 96/255, 0.1)
-                                            : msgDelegate.isUser
-                                                ? Qt.rgba(200/255,184/255,154/255,0.08)
-                                                : Qt.rgba(96/255,168/255,128/255,0.06)
+                                            : msgDelegate.isCode
+                                                ? Qt.rgba(30/255, 35/255, 42/255, 0.95)
+                                                : msgDelegate.isUser
+                                                    ? Qt.rgba(200/255,184/255,154/255,0.08)
+                                                    : Qt.rgba(96/255,168/255,128/255,0.06)
                                         border.width: 1
                                         border.color: msgDelegate.isError
                                             ? Qt.rgba(200/255, 112/255, 96/255, 0.3)
-                                            : msgDelegate.isUser
-                                                ? Qt.rgba(200/255,184/255,154/255,0.15)
-                                                : Qt.rgba(96/255,168/255,128/255,0.15)
+                                            : msgDelegate.isCode
+                                                ? Qt.rgba(96/255, 140/255, 180/255, 0.2)
+                                                : msgDelegate.isUser
+                                                    ? Qt.rgba(200/255,184/255,154/255,0.15)
+                                                    : Qt.rgba(96/255,168/255,128/255,0.15)
 
                                         // Role label
                                         Text {
@@ -299,18 +520,23 @@ Item {
                                                 topMargin: msgDelegate.labelTopMargin
                                                 leftMargin: msgDelegate.bubblePaddingH
                                             }
-                                            text: msgDelegate.isError ? "ERR" : (msgDelegate.isUser ? "OPERATOR" : "AI")
+                                            text: msgDelegate.isError ? "ERR"
+                                                : msgDelegate.isUser ? "OPERATOR"
+                                                : msgDelegate.isCode ? ("CODE" + (msgDelegate.msg.lang ? " // " + msgDelegate.msg.lang.toUpperCase() : ""))
+                                                : "AI"
                                             font.family: "Share Tech Mono"
                                             font.pixelSize: s(6)
                                             font.letterSpacing: 1.5
                                             color: msgDelegate.isError
                                                 ? Qt.rgba(200/255, 112/255, 96/255, 0.6)
-                                                : msgDelegate.isUser
-                                                    ? Qt.rgba(200/255,184/255,154/255,0.35)
-                                                    : Qt.rgba(96/255,168/255,128/255,0.45)
+                                                : msgDelegate.isCode
+                                                    ? Qt.rgba(96/255, 140/255, 180/255, 0.5)
+                                                    : msgDelegate.isUser
+                                                        ? Qt.rgba(200/255,184/255,154/255,0.35)
+                                                        : Qt.rgba(96/255,168/255,128/255,0.45)
                                         }
 
-                                        Text {
+                                        TextEdit {
                                             id: msgText
                                             anchors {
                                                 top: roleLabel.bottom
@@ -321,18 +547,86 @@ Item {
                                                 topMargin: msgDelegate.textTopMargin
                                             }
                                             text: msgDelegate.msg.content
-                                            textFormat: msgDelegate.isUser || msgDelegate.isError
-                                                ? Text.PlainText
-                                                : Text.MarkdownText
+                                            textFormat: (msgDelegate.isUser || msgDelegate.isError || msgDelegate.isCode)
+                                                ? TextEdit.PlainText
+                                                : TextEdit.MarkdownText
+                                            readOnly: true
+                                            selectByMouse: true
+                                            persistentSelection: true
                                             font.family: "Share Tech Mono"
                                             font.pixelSize: s(Settings.aiChatFontSize)
                                             font.letterSpacing: 0.5
                                             color: msgDelegate.isError
                                                 ? Qt.rgba(200/255, 112/255, 96/255, 0.8)
-                                                : Qt.rgba(200/255,184/255,154/255,0.75)
-                                            linkColor: Qt.rgba(200/255,184/255,154/255,0.9)
+                                                : msgDelegate.isCode
+                                                    ? Qt.rgba(160/255, 190/255, 220/255, 0.85)
+                                                    : Qt.rgba(200/255,184/255,154/255,0.75)
+                                            selectionColor: Qt.rgba(200/255,184/255,154/255,0.25)
                                             wrapMode: Text.WordWrap
-                                            lineHeight: 1.3
+                                            // TextEdit has no lineHeight prop; approximate via font
+                                        }
+                                    }
+
+                                    // Copy Button placed outside the msgBubble
+                                    Item {
+                                        id: copyBtn
+                                        width: s(34)
+                                        height: s(14)
+
+                                        anchors.verticalCenter: msgBubble.verticalCenter
+                                        anchors.right: msgDelegate.isUser ? msgBubble.left : undefined
+                                        anchors.left: msgDelegate.isUser ? undefined : msgBubble.right
+                                        anchors.rightMargin: msgDelegate.isUser ? s(6) : undefined
+                                        anchors.leftMargin: msgDelegate.isUser ? undefined : s(6)
+
+                                        opacity: (msgHover.hovered || copyBtnMa.containsMouse || copiedTimer.running) ? 1.0 : 0.0
+                                        visible: opacity > 0.0
+                                        Behavior on opacity { NumberAnimation { duration: 150 } }
+
+                                        property bool copied: false
+
+                                        Rectangle {
+                                            anchors.fill: parent
+                                            color: copyBtnMa.containsMouse
+                                                ? Qt.rgba(200/255, 184/255, 154/255, 0.08)
+                                                : (copyBtn.copied ? Qt.rgba(96/255, 168/255, 128/255, 0.1) : "transparent")
+                                            border.width: 1
+                                            border.color: copyBtn.copied
+                                                ? Qt.rgba(96/255, 168/255, 128/255, 0.5)
+                                                : (copyBtnMa.containsMouse ? Qt.rgba(200/255, 184/255, 154/255, 0.4) : Qt.rgba(200/255, 184/255, 154/255, 0.12))
+
+                                            Behavior on color { ColorAnimation { duration: 150 } }
+                                            Behavior on border.color { ColorAnimation { duration: 150 } }
+                                        }
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: copyBtn.copied ? "COPIED" : "COPY"
+                                            font.family: "Share Tech Mono"
+                                            font.pixelSize: s(6)
+                                            font.letterSpacing: 1
+                                            color: copyBtn.copied
+                                                ? Qt.rgba(96/255, 168/255, 128/255, 0.95)
+                                                : (copyBtnMa.containsMouse ? Qt.rgba(200/255, 184/255, 154/255, 0.75) : Qt.rgba(200/255, 184/255, 154/255, 0.3))
+
+                                            Behavior on color { ColorAnimation { duration: 150 } }
+                                        }
+
+                                        Timer {
+                                            id: copiedTimer
+                                            interval: 2000
+                                            onTriggered: copyBtn.copied = false
+                                        }
+
+                                        MouseArea {
+                                            id: copyBtnMa
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            onClicked: {
+                                                Quickshell.clipboardText = msgDelegate.msg.content
+                                                copyBtn.copied = true
+                                                copiedTimer.restart()
+                                            }
                                         }
                                     }
                                 }
@@ -728,13 +1022,8 @@ Item {
         // Scroll to bottom
         scrollToBottom()
 
-        // Dispatch to provider
-        var provider = Settings.aiProvider
-        if      (provider === "ollama")      sendOllama(text)
-        else if (provider === "groq")        sendGroq(text)
-        else if (provider === "openrouter")  sendOpenRouter(text)
-        else if (provider === "gemini")      sendGemini(text)
-        else    appendError("Unknown provider: " + provider)
+        // Dispatch to unified agent
+        sendToAgent()
     }
 
     function scrollToBottom() {
@@ -759,219 +1048,123 @@ Item {
         scrollToBottom()
     }
 
-    // ── Build message history for chat-completion APIs ──
-    // Prepends the system prompt from Settings if non-empty
-    function buildChatHistory() {
-        var history = []
-        if (Settings.aiSystemPrompt)
-            history.push({role: "system", content: Settings.aiSystemPrompt})
-        for (var i = 0; i < root.messages.length; i++) {
-            var m = root.messages[i]
-            if (m.role === "user" || m.role === "assistant") {
-                history.push({role: m.role, content: m.content})
-            }
-        }
-        return history
+    function clearChat() {
+        root.messages = []
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // PROVIDER: OLLAMA (local, no API key)
-    // POST http://localhost:11434/api/chat
-    // ──────────────────────────────────────────────────────────────
+    function exportChat() {
+        if (root.messages.length === 0) return
+        
+        var d = new Date()
+        var pad = function(n) { return String(n).padStart(2, '0') }
+        var timestamp = d.getFullYear() + pad(d.getMonth()+1) + pad(d.getDate()) + "_" + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds())
+        var filepath = "$HOME/YoRHa-Logs/log_" + timestamp + ".md"
+        
+        var md = "# YoRHa // TACTICAL AI CHAT LOG\n"
+        md += "Timestamp: " + d.toLocaleString() + "\n"
+        md += "Provider: " + Settings.aiProvider.toUpperCase() + "\n"
+        md += "Model: " + Settings.aiModel.toUpperCase() + "\n\n"
+        md += "========================================================\n\n"
+        
+        for (var i = 0; i < root.messages.length; i++) {
+            var m = root.messages[i]
+            var sender = m.role === "user" ? "OPERATOR" : (m.role === "error" ? "SYSTEM ERROR" : "AI")
+            md += "### [ " + sender + " ]\n\n" + m.content + "\n\n"
+        }
+        
+        var escapedMd = md.replace(/'/g, "'\\''")
+        var cmd = "mkdir -p $HOME/YoRHa-Logs && echo '" + escapedMd + "' > " + filepath
+        
+        exportProc.command = ["sh", "-c", cmd]
+        exportProc.running = true
+    }
+
     Process {
-        id: ollamaProc
+        id: agentProc
         command: ["sh", "-c", "echo"]
         running: false
         stdout: StdioCollector {
             onStreamFinished: {
-                var data = this.text
-                try {
-                    var obj = JSON.parse(data.trim())
-                    if (obj.message && obj.message.content) {
-                        root.appendAssistant(obj.message.content)
-                    } else if (obj.error) {
-                        root.appendError("Ollama: " + obj.error)
-                    } else {
-                        root.appendError("Ollama: unexpected response")
-                    }
-                } catch(e) {
-                    root.appendError("Ollama: " + data.trim())
+                var data = this.text.trim()
+                if (data.indexOf("Connection failed:") === 0 || data.indexOf("Error:") === 0) {
+                    root.appendError(data)
+                } else {
+                    root.appendAssistant(data)
                 }
             }
         }
         onExited: (exitCode, exitStatus) => {
-            if (root.loading) {
-                root.appendError("Ollama: connection failed (exit " + exitCode + ")")
+            if (root.loading && exitCode !== 0) {
+                root.appendError("Agent execution failed (exit " + exitCode + ")")
             }
         }
     }
 
-    function sendOllama(text) {
-        var history = buildChatHistory()
-        var body = JSON.stringify({
-            model: Settings.ollamaModel,
-            messages: history,
-            stream: false
-        })
-        ollamaProc.command = ["sh", "-c",
-            "curl -s -m 120 -X POST " + Settings.ollamaEndpoint + "/api/chat "
-          + "-H 'Content-Type: application/json' "
-          + "-d '" + body.replace(/'/g, "'\\''") + "'"
-        ]
-        ollamaProc.running = true
-    }
-
-    // ──────────────────────────────────────────────────────────────
-    // PROVIDER: GROQ (cloud, API key required)
-    // POST https://api.groq.com/openai/v1/chat/completions
-    // ──────────────────────────────────────────────────────────────
     Process {
-        id: groqProc
+        id: exportProc
         command: ["sh", "-c", "echo"]
         running: false
-        stdout: StdioCollector {
-            onStreamFinished: root._handleOpenAIResponse(this.text, "Groq")
-        }
         onExited: (exitCode, exitStatus) => {
-            if (root.loading) root.appendError("Groq: connection failed (exit " + exitCode + ")")
-        }
-    }
-
-    function sendGroq(text) {
-        if (!Settings.groqApiKey) { appendError("Groq: API key not set in Settings.qml"); return }
-        var history = buildChatHistory()
-        var body = JSON.stringify({
-            model: Settings.groqModel,
-            messages: history,
-            stream: false
-        })
-        groqProc.command = ["sh", "-c",
-            "curl -s -m 120 -X POST https://api.groq.com/openai/v1/chat/completions "
-          + "-H 'Content-Type: application/json' "
-          + "-H 'Authorization: Bearer " + Settings.groqApiKey + "' "
-          + "-d '" + body.replace(/'/g, "'\\''") + "'"
-        ]
-        groqProc.running = true
-    }
-
-    // ──────────────────────────────────────────────────────────────
-    // PROVIDER: OPENROUTER (cloud, API key required) — DEFAULT
-    // POST https://openrouter.ai/api/v1/chat/completions
-    // ──────────────────────────────────────────────────────────────
-    Process {
-        id: openrouterProc
-        command: ["sh", "-c", "echo"]
-        running: false
-        stdout: StdioCollector {
-            onStreamFinished: root._handleOpenAIResponse(this.text, "OpenRouter")
-        }
-        onExited: (exitCode, exitStatus) => {
-            if (root.loading) root.appendError("OpenRouter: connection failed (exit " + exitCode + ")")
-        }
-    }
-
-    function sendOpenRouter(text) {
-        if (!Settings.openrouterApiKey) { appendError("OpenRouter: API key not set in Settings.qml"); return }
-        var history = buildChatHistory()
-        var body = JSON.stringify({
-            model: Settings.openrouterModel,
-            messages: history,
-            stream: false
-        })
-        openrouterProc.command = ["sh", "-c",
-            "curl -s -m 120 -X POST https://openrouter.ai/api/v1/chat/completions "
-          + "-H 'Content-Type: application/json' "
-          + "-H 'Authorization: Bearer " + Settings.openrouterApiKey + "' "
-          + "-d '" + body.replace(/'/g, "'\\''") + "'"
-        ]
-        openrouterProc.running = true
-    }
-
-    // ── Shared OpenAI-compatible response parser (Groq + OpenRouter) ──
-    function _handleOpenAIResponse(data, label) {
-        try {
-            var obj = JSON.parse(data.trim())
-            if (obj.error) {
-                appendError(label + ": " + (obj.error.message || JSON.stringify(obj.error)))
-            } else if (obj.choices && obj.choices.length > 0 && obj.choices[0].message) {
-                appendAssistant(obj.choices[0].message.content)
+            if (exitCode === 0) {
+                notifyProc.command = ["notify-send", "LOG ARCHIVED", "Tactical log successfully saved to YoRHa archives.", "--icon=dialog-information"]
+                notifyProc.running = true
             } else {
-                appendError(label + ": unexpected response format")
+                notifyProc.command = ["notify-send", "EXPORT FAILED", "Failed to save tactical log.", "--icon=dialog-error"]
+                notifyProc.running = true
             }
-        } catch(e) {
-            appendError(label + ": " + data.trim())
         }
     }
 
-    // ──────────────────────────────────────────────────────────────
-    // PROVIDER: GEMINI (cloud, API key required)
-    // POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent
-    // ──────────────────────────────────────────────────────────────
     Process {
-        id: geminiProc
+        id: notifyProc
         command: ["sh", "-c", "echo"]
         running: false
-        stdout: StdioCollector {
-            onStreamFinished: {
-                var data = this.text
-                try {
-                    var obj = JSON.parse(data.trim())
-                    if (obj.error) {
-                        root.appendError("Gemini: " + (obj.error.message || JSON.stringify(obj.error)))
-                    } else if (obj.candidates && obj.candidates.length > 0
-                               && obj.candidates[0].content
-                               && obj.candidates[0].content.parts
-                               && obj.candidates[0].content.parts.length > 0) {
-                        root.appendAssistant(obj.candidates[0].content.parts[0].text)
-                    } else {
-                        root.appendError("Gemini: unexpected response format")
-                    }
-                } catch(e) {
-                    root.appendError("Gemini: " + data.trim())
-                }
-            }
-        }
-        onExited: (exitCode, exitStatus) => {
-            if (root.loading) root.appendError("Gemini: connection failed (exit " + exitCode + ")")
+    }
+
+    function sendToAgent() {
+    var provider = Settings.aiProvider
+    var model = Settings.aiModel
+    var apiKey = ""
+    if (provider === "groq") apiKey = Settings.groqApiKey
+    else if (provider === "openrouter") apiKey = Settings.openrouterApiKey
+    else if (provider === "gemini") apiKey = Settings.geminiApiKey
+
+    var endpoint = Settings.ollamaEndpoint
+    var systemPrompt = Settings.aiSystemPrompt
+
+    var history = []
+    for (var i = 0; i < root.messages.length; i++) {
+        var m = root.messages[i]
+        if (m.role === "user" || m.role === "assistant") {
+            history.push({role: m.role, content: m.content})
         }
     }
 
-    function sendGemini(text) {
-        if (!Settings.geminiApiKey) { appendError("Gemini: API key not set in Settings.qml"); return }
+    var historyStr = JSON.stringify(history)
 
-        // Convert chat history to Gemini format
-        var contents = []
-        for (var i = 0; i < root.messages.length; i++) {
-            var m = root.messages[i]
-            if (m.role === "user" || m.role === "assistant") {
-                contents.push({
-                    role: m.role === "assistant" ? "model" : "user",
-                    parts: [{text: m.content}]
-                })
-            }
-        }
+    // Resolve relative to the running shell config, not a hardcoded username/path
+    var scriptPath = Quickshell.shellDir + "/scripts/ai_agent.py"
 
-        // Build request body with optional system instruction
-        var reqBody = { contents: contents }
-        if (Settings.aiSystemPrompt)
-            reqBody.systemInstruction = { parts: [{text: Settings.aiSystemPrompt}] }
+    var args = [
+        scriptPath,
+        "--provider", provider,
+        "--model", model,
+        "--history", historyStr
+    ]
 
-        var body = JSON.stringify(reqBody)
-        var url = "https://generativelanguage.googleapis.com/v1beta/models/"
-                + Settings.geminiModel + ":generateContent?key=" + Settings.geminiApiKey
+    if (apiKey) args.push("--api-key", apiKey)
+    if (endpoint) args.push("--endpoint", endpoint)
+    if (systemPrompt) args.push("--system-prompt", systemPrompt)
+    if (root.allowRoot) args.push("--allow-root")
 
-        geminiProc.command = ["sh", "-c",
-            "curl -s -m 120 -X POST '" + url + "' "
-          + "-H 'Content-Type: application/json' "
-          + "-d '" + body.replace(/'/g, "'\\''") + "'"
-        ]
-        geminiProc.running = true
-    }
+    agentProc.command = args
+    agentProc.running = true
+}
 
     // ── Response timeout ──
     Timer {
         id: timeoutTimer
-        interval: 130000  // 130s (slightly above curl's 120s timeout)
+        interval: 130000
         running: root.loading
         repeat: false
         onTriggered: {

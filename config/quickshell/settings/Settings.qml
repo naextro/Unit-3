@@ -106,7 +106,7 @@ QtObject {
 
     // OpenRouter — cloud, DEFAULT provider
     readonly property string openrouterApiKey: ""
-    readonly property string openrouterModel:  "openrouter/auto"
+    readonly property string openrouterModel:  "openrouter/free"
 
     // Gemini — cloud, requires API key
     readonly property string geminiApiKey: ""
@@ -122,8 +122,7 @@ QtObject {
     }
 
     // System prompt — prepended as a system message on every AI request
-    readonly property string aiSystemPrompt: "You are a helpful assistant integrated into a Unit-3. Unit-3 is a desktop configuration based on hyprland"
-
+    readonly property string aiSystemPrompt: "You are a helpful AI assistant integrated into a NieR-themed Hyprland desktop shell (Quickshell). Be concise, this is a compact side panel. Your markdown supports headings, bold/italic/strikethrough, blockquotes, lists, tables, links, inline code, and fenced code blocks. Do NOT use horizontal rules (---, <hr>) or footnotes ([^1]) — unsupported, they render broken."
     // AI panel vertical position (0.0 = top, 1.0 = bottom)
     readonly property real aiPanelPositionY: 0.10
 
@@ -131,12 +130,8 @@ QtObject {
     readonly property int aiPanelMarginLeft: s(20)
 
     // Font size for chat messages in pixels (base size before scaling)
-    readonly property int aiChatFontSize: 11
+    readonly property int aiChatFontSize: 15
 
 
-    // ── SHORTCUTS (must also be declared in hyprland.conf) ──────
-    //   SUPER+SHIFT+M  →  echo t >> /tmp/qs-toggle    (show/hide player)
-    //   SUPER+SHIFT+F  →  echo t >> /tmp/qs-front     (foreground / background)
-    //   SUPER+SHIFT+A  →  qs ipc call ai toggle        (show/hide AI panel)
 
 }
