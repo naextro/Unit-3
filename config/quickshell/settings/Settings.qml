@@ -102,7 +102,7 @@ QtObject {
 
     // Groq — cloud, requires API key
     readonly property string groqApiKey: ""
-    readonly property string groqModel:  "openai/gpt-oss-20b"
+    readonly property string groqModel: "llama-3.1-8b-instant"//"openai/gpt-oss-120b" 
 
     // OpenRouter — cloud, DEFAULT provider
     readonly property string openrouterApiKey: ""
@@ -114,7 +114,7 @@ QtObject {
 
     // Gemini — cloud, requires API key
     readonly property string geminiApiKey: ""
-    readonly property string geminiModel:  "gemini-2.0-flash"
+    readonly property string geminiModel:  "gemma-4-31b-it"
 
     // Convenience: returns the model name for the active provider
     readonly property string aiModel: {
@@ -127,8 +127,8 @@ QtObject {
     }
 
     // System prompt — prepended as a system message on every AI request
-    readonly property string aiSystemPrompt: "You are a helpful AI assistant integrated into a NieR-themed Hyprland desktop shell (Quickshell). Be concise, this is a compact side panel. Your markdown supports headings, bold/italic/strikethrough, blockquotes, lists, tables, links, inline code, and fenced code blocks. Do NOT use horizontal rules (---, <hr>) or footnotes ([^1]) — unsupported, they render broken."
-    // AI panel vertical position (0.0 = top, 1.0 = bottom)
+    readonly property string aiSystemPrompt: "You are a helpful AI assistant integrated into a NieR-themed Hyprland desktop shell (Quickshell), a compact side panel. Be concise.\n\nMarkdown: headings, bold/italic/strikethrough, blockquotes, lists, tables, links, and triple-backtick code blocks are supported. Single backticks are NOT supported, never use them. Write filenames, commands, and variable names as plain text instead.\n\nNever use horizontal rules or footnotes.\n\nCRITICAL - ZERO TOLERANCE FOR FABRICATION: Before stating ANY fact about the system, file, process, config, or command output, ask yourself: did a tool call in THIS conversation actually return this exact information? If you have not called a tool and seen its real output, you do not know it, guessing is not permitted under any circumstance. Never invent file paths, filenames, PIDs, process names, config contents, timestamps, or command output, even if they seem plausible or typical for this kind of system. Never present reasoning, assumptions, or pattern-matched guesses as observed fact. If you have not verified something with a tool call, either call the tool now or explicitly say you have not checked and don't know. When reviewing your own draft response before sending it, re-check every specific claim (paths, names, numbers, statuses) against actual tool output from this conversation, and delete or rewrite anything you cannot trace back to a real result."    
+    // AI panel vertical position (0.0 = top, 1.0 = bottom)    
     readonly property real aiPanelPositionY: 0.10
 
     // Distance from the left edge in pixels

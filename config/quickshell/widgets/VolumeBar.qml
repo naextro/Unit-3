@@ -18,10 +18,10 @@ ShellRoot {
 
     // ── Parameters ──
     readonly property int segments: 30
-    readonly property int hoverWidth: 65
-    readonly property int barWidth: 40
+    readonly property int hoverWidth: 30
+    readonly property int barWidth: 30
     readonly property int barHeight: 420
-    readonly property int leftOffset: 18
+    readonly property int leftOffset: 10
     readonly property int hideDelay: 400
 
     readonly property int segFilledW: 14

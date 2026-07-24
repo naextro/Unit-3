@@ -102,12 +102,11 @@ def call_openai_compatible(url, api_key, model, messages):
             return res["choices"][0]["message"]["content"]
     except urllib.error.HTTPError as e:
         error_body = e.read().decode('utf-8', errors='replace')
+        e.body_text = error_body   # cache it, .read() only works once
         try:
             err_json = json.loads(error_body)
             err_obj = err_json.get("error", {})
             if err_obj.get("code") == "tool_use_failed" and "failed_generation" in err_obj:
-                # Model tried native tool calling instead of our XML format.
-                # Convert its intended call into our expected <tool_call> tag.
                 gen = json.loads(err_obj["failed_generation"])
                 tool_name = gen.get("name", "")
                 tool_args = gen.get("arguments", {})
@@ -134,8 +133,9 @@ def call_gemini(api_key, model, messages, system_prompt):
     req = urllib.request.Request(url, data=json.dumps(req_body).encode('utf-8'), headers={"Content-Type": "application/json"})
     with urllib.request.urlopen(req, timeout=120) as response:
         res = json.loads(response.read().decode('utf-8'))
-        return res["candidates"][0]["content"]["parts"][0]["text"]
-
+        parts = res["candidates"][0]["content"]["parts"]
+        text_parts = [p["text"] for p in parts if "text" in p and not p.get("thought", False)]
+        return "".join(text_parts).strip() or "(empty response from model)"
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--provider", required=True)
@@ -195,24 +195,62 @@ def main():
                 print(f"Error: Unknown provider {args.provider}")
                 sys.exit(1)
         except urllib.error.HTTPError as e:
-            error_body = e.read().decode('utf-8', errors='replace')
-            print(f"Connection failed: HTTP {e.code}: {error_body}")
+            error_body = getattr(e, 'body_text', None)
+            if error_body is None:
+                try:
+                    error_body = e.read().decode('utf-8', errors='replace')
+                except Exception:
+                    error_body = "<no response body available>"
+
+            detail = error_body
+            try:
+                err_json = json.loads(error_body)
+                err_obj = err_json.get("error", err_json)
+                if isinstance(err_obj, dict):
+                    parts = []
+                    for key in ("message", "type", "code", "status", "param"):
+                        if err_obj.get(key):
+                            parts.append(f"{key}={err_obj[key]}")
+                    if parts:
+                        detail = " | ".join(parts)
+            except Exception:
+                pass
+
+            headers_str = ""
+            try:
+                retry_after = e.headers.get("Retry-After") if e.headers else None
+                if retry_after:
+                    headers_str = f" | Retry-After: {retry_after}s"
+            except Exception:
+                pass
+
+            print(f"Connection failed: HTTP {e.code} ({e.reason}){headers_str}\n{detail}")
+            sys.exit(1)
+        except urllib.error.URLError as e:
+            print(f"Connection failed: could not reach server - {e.reason}")
+            sys.exit(1)
+        except json.JSONDecodeError as e:
+            print(f"Connection failed: server returned invalid JSON - {e}")
+            sys.exit(1)
+        except KeyError as e:
+            print(f"Connection failed: unexpected response format - missing key {e}")
             sys.exit(1)
         except Exception as e:
-            print(f"Connection failed: {e}")
+            print(f"Connection failed: {type(e).__name__}: {e}")
             sys.exit(1)
+        # Strip reasoning blocks some models (e.g. Qwen3) emit inline
+        content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
 
         # Parse tool call if any
         # Format: <tool_call name="tool_name" attr="val" />
         tool_call_match = re.search(r'<tool_call\s+name="([^"]+)"\s+(query|cmd)="([^"]+)"\s*/?>', content)
-
         if tool_call_match:
             tool_name = tool_call_match.group(1)
             arg_name = tool_call_match.group(2)
             arg_val = tool_call_match.group(3)
 
             # Print execution info so user/GUI knows what's happening
-            print(f"🤖 Calling tool: {tool_name} with {arg_name}={arg_val}")
+            print(f"```🤖 Calling tool: {tool_name} with {arg_name}={arg_val}``` \n")
 
             if tool_name == "web_search":
                 res = web_search(arg_val)

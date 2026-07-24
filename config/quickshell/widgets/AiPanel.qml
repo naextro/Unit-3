@@ -21,7 +21,7 @@ Item {
     // ── Sizing — 20% screen width, 80% screen height ──
     property real screenW: 1920
     property real screenH: 1080
-    readonly property int pw: Math.round(screenW * 0.20)
+    readonly property int pw: Math.round(screenW * 0.30)
     readonly property int ph: Math.round(screenH * 0.80)
 
     // ── State ──
@@ -91,37 +91,7 @@ Item {
                 }
             }
             // Check for double backtick
-            if (text.substring(i, i + 2) === "``") {
-                var closeIdx2 = text.indexOf("``", i + 2)
-                if (closeIdx2 !== -1) {
-                    if (current.trim() !== "") {
-                        result.push({role: "assistant", content: current.trim(), isCode: false})
-                    }
-                    current = ""
-                    var codeContent2 = text.substring(i + 2, closeIdx2)
-                    if (codeContent2.trim() !== "") {
-                        result.push({role: "assistant", content: codeContent2.trim(), isCode: true, lang: ""})
-                    }
-                    i = closeIdx2 + 2
-                    continue
-                }
-            }
-            // Check for single backtick
-            if (text[i] === '`') {
-                var closeIdx1 = text.indexOf("`", i + 1)
-                if (closeIdx1 !== -1) {
-                    if (current.trim() !== "") {
-                        result.push({role: "assistant", content: current.trim(), isCode: false})
-                    }
-                    current = ""
-                    var codeContent1 = text.substring(i + 1, closeIdx1)
-                    if (codeContent1.trim() !== "") {
-                        result.push({role: "assistant", content: codeContent1.trim(), isCode: true, lang: ""})
-                    }
-                    i = closeIdx1 + 1
-                    continue
-                }
-            }
+            
             current += text[i]
             i++
         }
@@ -490,7 +460,7 @@ Item {
                                                 msgText.implicitWidth + (msgDelegate.bubblePaddingH * 2),
                                                 roleLabel.implicitWidth + (msgDelegate.bubblePaddingH * 2)
                                             ),
-                                            parent.width * 0.88
+                                            parent.width * 0.9
                                         )
                                         implicitHeight: msgDelegate.labelTopMargin + roleLabel.implicitHeight + msgDelegate.textTopMargin + msgText.implicitHeight + msgDelegate.bubblePaddingB
                                         anchors.right: msgDelegate.isUser ? parent.right : undefined
