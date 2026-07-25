@@ -4,8 +4,6 @@ hyprlock
 hypridle
 xdg-desktop-portal-hyprland
 
-# ─── Bar (Waybar) ──────────────────────────────────────
-waybar
 
 # ─── Quickshell runtime dependencies ───────────────────
 qt5-wayland
